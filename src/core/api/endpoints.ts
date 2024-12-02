@@ -1,0 +1,5 @@
+export const USERS = "/customers"
+export const EVENTS = "/events"
+export const PAYMENT_INTENT = "/payment_providers/:id/payment_intent"
+export const SUBSCRIBE = "/payment_providers/:id/subscriptions"
+export const ATTRIBUTION = "/customers/attribution"

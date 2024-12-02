@@ -1,0 +1,61 @@
+{
+  "name": "apphud.js",
+  "version": "1.0.0",
+  "homepage": "https://apphud.com",
+  "description": "Apphud Web-to-Web SDK",
+  "type": "module",
+  "main": "./dist/apphud.js",
+  "module": "./dist/apphud.esm.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "BASE_URL=http://api.lvh.me:3000/v1 APPHUD_STRIPE_LIVE_KEY=pk_live_4iYTlDlSJeqsh5ZAZNuDsLte004vt1l4tS APPHUD_STRIPE_TEST_KEY=pk_test_leENTjttGVwRY2ZkCk0UaaiG00oeNHfn4o SUCCESS_URL=http://getapp.lvh.me:3000 rollup -c",
+    "build_prod": "BASE_URL=https://api.apphud.com/v1 APPHUD_STRIPE_LIVE_KEY=pk_live_4iYTlDlSJeqsh5ZAZNuDsLte004vt1l4tS APPHUD_STRIPE_TEST_KEY=pk_test_leENTjttGVwRY2ZkCk0UaaiG00oeNHfn4o SUCCESS_URL=https://getapp.apphud.com rollup -c",
+    "build_stage": "BASE_URL=https://api.apphudstage.com/v1 APPHUD_STRIPE_LIVE_KEY=pk_live_4iYTlDlSJeqsh5ZAZNuDsLte004vt1l4tS APPHUD_STRIPE_TEST_KEY=pk_test_leENTjttGVwRY2ZkCk0UaaiG00oeNHfn4o SUCCESS_URL=https://getapp.apphudstage.com rollup -c",
+    "build_dev": "BASE_URL=https://api.apphuddev.com/v1 APPHUD_STRIPE_LIVE_KEY=pk_live_4iYTlDlSJeqsh5ZAZNuDsLte004vt1l4tS APPHUD_STRIPE_TEST_KEY=pk_test_leENTjttGVwRY2ZkCk0UaaiG00oeNHfn4o SUCCESS_URL=https://getapp.apphuddev.com rollup -c",
+    "lint": "eslint src",
+    "docs": "typedoc"
+  },
+  "keywords": [
+    "apphud",
+    "web-to-web",
+    "web2web"
+  ],
+  "authors": [
+    "Alexander Selivanov"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/apphud/apphud.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^9.8.0",
+    "@paddle/paddle-js": "^1.2.1",
+    "@rollup/plugin-buble": "^1.0.1",
+    "@rollup/plugin-commonjs": "^24.0.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.7",
+    "@rollup/plugin-terser": "^0.2.1",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@stripe/stripe-js": "^4.5.0",
+    "@types/eslint__js": "^8.42.3",
+    "@types/node": "^22.5.0",
+    "@types/ua-parser-js": "^0.7.39",
+    "@typescript-eslint/eslint-plugin": "^8.0.1",
+    "@typescript-eslint/parser": "^8.0.1",
+    "eslint": "^9.8.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "prettier": "^3.3.3",
+    "rollup": "^3.9.1",
+    "tslib": "^2.6.3",
+    "typedoc": "^0.26.7",
+    "typedoc-plugin-markdown": "^4.2.7",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.0.1",
+    "ua-parser-js": "^1.0.38"
+  }
+}

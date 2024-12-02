@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- GTM -->
+    <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-ENXCE5ZWG0"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-ENXCE5ZWG0');
+    </script>
+
+    <!-- Meta Pixel Code -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '7600403403324046');
+      fbq('track', 'PageView');
+    </script>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Payment</title>
+
+    <link rel="stylesheet" href="css/base.css" />
+    <script src="web-1.0.0.min.js"></script>
+
+    <script src="index.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>Apphud Demo</h1>
+
+      <div class="container">
+        <p class="heading">Track event</p>
+        <button id="track-event" data-event-name="Some event">track</button>
+      </div>
+
+      <div class="container">
+        <p class="heading">Save user email</p>
+        <div class="email-form">
+          <input type="email" placeholder="Email" id="email-input" />
+          <button id="save-email-button">Submit</button>
+        </div>
+      </div>
+
+      <div class="container">
+        <p class="heading">Choose product</p>
+        <div class="products" id="products">
+          <button class="active f1" data-product-index="0">
+            <s><span class="old-price" data-aph-var="main_web,0,old-price"></span></s> <span data-aph-var="main_web,0,new-price">$~</span>
+          </button>
+          <button class="f1" data-product-index="1">
+            <s><span class="old-price" data-aph-var="main_web,1,old-price"></span></s> <span data-aph-var="main_web,1,new-price">$~</span>
+          </button>
+          <button class="f1" data-product-index="2">
+            <s><span class="old-price" data-aph-var="main_web,2,old-price"></span></s> <span data-aph-var="main_web,2,new-price">$~</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="container">
+        <p class="heading">Load variables</p>
+        <div>Old price: <span data-aph-var=",-1,old-price"></span></div>
+        <div>New price: <span data-aph-var=",-1,new-price"></span></div>
+      </div>
+
+      <form class="container" id="apphud-payment-form">
+        <div id="payment-element"></div>
+        <button id="submit">Subscribe</button>
+        <div id="error-message"></div>
+      </form>
+
+      <div id="messages" role="alert" style="display: none;"></div>
+    </main>
+  </body>
+</html>

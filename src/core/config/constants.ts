@@ -1,0 +1,9 @@
+export const StartAppVersionKey: string = "aph_start_version";
+export const UserIdKey: string = "aph_user_id";
+export const EventsKey: string = "aph_events";
+export const UserCookieDuration: number = 2 * 365 * 24 * 60
+export const VariableDataAttribute: string = "data-aph-var";
+export const PaymentFormContainer: string = "#apphud-payment-form";
+export const SelectedProductIndex: string = "aph_selected_product_index";
+export const DeepLinkURL: string = "aph_deep_link_url";
+export const SelectedProductDuration: number = 2 * 365 * 24 * 60;
