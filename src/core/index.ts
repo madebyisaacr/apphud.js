@@ -65,6 +65,17 @@ export default class ApphudSDK implements Apphud {
     public async init(options: Config): Promise<void> {
         log('init', options)
 
+        const placeholderKeys = [
+            "your_api_key",
+            "your_api_key_here",
+            "YOUR-APPHUD-FLOW-KEY"
+        ];
+
+        if (placeholderKeys.includes(options.apiKey)) {
+            logError("You did not provide API Key for Web SDK. Check script tags inside body tag. Learn more: https://docs.apphud.com/docs/flow-builder");
+            return;
+        }
+
         for (const key in options) {
             if (Object.prototype.hasOwnProperty.call(options, key)) {
                 (config as any)[key] = options[key as keyof Config];
@@ -637,7 +648,14 @@ export default class ApphudSDK implements Apphud {
     }
 
     private findPlacementByID(id: string): Placement | undefined {
-        return this.placements.find(elm => elm.identifier === id)
+        const placement = this.placements.find(elm => elm.identifier === id);
+        
+        if (!placement) {
+            const existingIdentifiers = this.placements.map(p => p.identifier);
+            console.warn(`Placement with identifier "${id}" was requested, but only these placements were found: [${existingIdentifiers.join(', ')}].`);
+        }
+        
+        return placement;
     }
 
     /**
@@ -650,8 +668,19 @@ export default class ApphudSDK implements Apphud {
         this._currentPlacement = this.findPlacementByID(placementID)
         if (this._currentPlacement !== null && this._currentPlacement !== undefined && this._currentPlacement.paywalls.length > 0) {
             this._currentPaywall = this._currentPlacement.paywalls[0]
-
             this._currentProduct = this._currentPaywall.items[productIndex]
+
+            // Check for required price macros
+            const product = this._currentProduct;
+            if (product && product.properties) {
+                const hasPriceMacros = Object.values(product.properties).some((langProps: Record<string, string>) => 
+                    langProps['new-price'] && langProps['old-price']
+                );
+
+                if (!hasPriceMacros) {
+                    logError(`Placement with identifier "${placementID}" was requested and found, but price macros are missing. Learn how to set up macros here: https://docs.apphud.com/docs/configure-web-placements#setting-up-product-macros`);
+                }
+            }
 
             log("Current placement", this._currentPlacement)
             log("Current paywall", this._currentPaywall)
