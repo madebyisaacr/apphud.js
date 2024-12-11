@@ -1,4 +1,4 @@
-import u from '../../utils';
+import u, { logError } from '../../utils';
 import {config} from "../config/config";
 import {
     CustomerData,
@@ -60,6 +60,10 @@ const createEvent = async (data: Events): Promise<Message> => {
  */
 const createSubscription = async (providerId: string, data: SubscriptionParams): Promise<Subscription> => {
     const response = await sendRequest('POST', router.subscribeUrl(providerId), data)
+
+    if (response.errors && response.errors.length > 0) {
+        logError('Subscription creation failed:', response.errors);
+    }
 
     return response.data.results as Subscription;
 }
