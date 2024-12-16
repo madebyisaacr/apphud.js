@@ -54,9 +54,16 @@ export default class ApphudSDK implements Apphud {
     private queue: ApphudFunc[] = []
     private events: LifecycleEvents = {}
     private eventQueue: EventData[] = []
+    private isInitialized: boolean = false;
     // private params = new URLSearchParams(window.location.search);
 
     constructor() {}
+
+    private checkInitialization(): void {
+        if (!this.isInitialized) {
+            logError("Apphud SDK not initialized");
+        }
+    }
 
     /**
      * Initialized SDK
@@ -94,6 +101,8 @@ export default class ApphudSDK implements Apphud {
             logError(e as Error);
         }
 
+        this.isInitialized = true;
+
         u.documentReady(async (): Promise<void> => {
             await this.initializeApp()
         });
@@ -105,6 +114,8 @@ export default class ApphudSDK implements Apphud {
      * @param callback - callback function
      */
     public on(eventName: LifecycleEventName, callback: LifecycleEventCallback): void {
+        this.checkInitialization();
+
         if (!this.events[eventName]) {
             this.events[eventName] = [];
         }
@@ -122,6 +133,8 @@ export default class ApphudSDK implements Apphud {
      * Get saved deeplink after subscription created
      */
     public getDeepLink(): string | null {
+        this.checkInitialization();
+
         return getCookie(DeepLinkURL)
     }
 
@@ -129,6 +142,8 @@ export default class ApphudSDK implements Apphud {
      * Get current User ID from cookies
      */
     public getUserID(): string | undefined {
+        this.checkInitialization();
+
         const uid = getCookie(UserIdKey);
 
         if (uid)
@@ -139,6 +154,8 @@ export default class ApphudSDK implements Apphud {
      * Reset everything. Remove User ID from cookies and flush events queue
      */
     public reset(): boolean {
+        this.checkInitialization();
+        
         deleteCookie(UserIdKey);
         deleteCookie(EventsKey);
 
@@ -152,6 +169,8 @@ export default class ApphudSDK implements Apphud {
      * @param userProperties - user properties
      */
     public track(name: string, properties: ApphudHash, userProperties: ApphudHash): boolean {
+        this.checkInitialization();
+
         // generate unique id
         const event: EventData = {
             name: name,
@@ -184,6 +203,8 @@ export default class ApphudSDK implements Apphud {
      * @param email - user email
      */
     public async setEmail(email: string): Promise<void> {
+        this.checkInitialization();
+
         const user = await this.createUser({email: email}, true)
 
         if (user)
@@ -213,6 +234,8 @@ export default class ApphudSDK implements Apphud {
      * @param product - product id - optional
      */
     public paymentForm(options: PaymentProviderFormOptions, product?: string): void {
+        this.checkInitialization();
+
         this.ready(async (): Promise<void> => {
             if (!this.currentProduct()) {
                 logError("Payment form: product is required")
@@ -276,6 +299,8 @@ export default class ApphudSDK implements Apphud {
      * @param productIndex - number of price in placement paywall
      */
     public selectPlacementProduct(placementID: string, productIndex: number): void {
+        this.checkInitialization();
+
         log("Save placement and product", placementID, productIndex)
 
         this.setCurrentItems(placementID, productIndex)
@@ -290,6 +315,8 @@ export default class ApphudSDK implements Apphud {
      * @param data - attribution data dictionary
      */
     public setAttribution(data: AttributionData): void {
+        this.checkInitialization();
+
         log("SetAttribution", data, this.getUserID()!)
 
 
@@ -400,6 +427,8 @@ export default class ApphudSDK implements Apphud {
      * @param language
      */
     public setLanguage(language: string): void {
+        this.checkInitialization();
+
         config.language = language
     }
 
@@ -558,6 +587,8 @@ export default class ApphudSDK implements Apphud {
      * Replace variables on the page
      */
     public operateVariables() {
+        this.checkInitialization();
+
         this.ready((): void => {
             log("Operate variables");
 
@@ -681,8 +712,19 @@ export default class ApphudSDK implements Apphud {
             // Check for required price macros
             const product = this._currentProduct;
             if (product && product.properties) {
+                const macrosToCheck = [
+                    'new-price',
+                    'old-price',
+                    'full-price',
+                    'discount',
+                    'duration',
+                    'custom-1',
+                    'custom-2',
+                    'custom-3'
+                ];
+            
                 const hasPriceMacros = Object.values(product.properties).some((langProps: Record<string, string>) => 
-                    langProps['new-price'] && langProps['old-price']
+                    macrosToCheck.some(macro => langProps[macro])
                 );
 
                 if (!hasPriceMacros) {
@@ -697,6 +739,8 @@ export default class ApphudSDK implements Apphud {
     }
 
     public currentProduct(): Product | null {
+        this.checkInitialization();
+        
         if (this._currentProduct)
             return this._currentProduct
 
@@ -710,6 +754,8 @@ export default class ApphudSDK implements Apphud {
     }
 
     public currentPlacement(): Placement | null {
+        this.checkInitialization();
+
         if (this._currentPlacement)
             return this._currentPlacement
 
@@ -723,6 +769,8 @@ export default class ApphudSDK implements Apphud {
     }
 
     public currentPaywall(): Paywall | null {
+        this.checkInitialization();
+        
         if (this._currentPaywall)
             return this._currentPaywall
 

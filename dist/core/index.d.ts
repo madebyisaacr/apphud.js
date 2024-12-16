@@ -18,7 +18,9 @@ export default class ApphudSDK implements Apphud {
     private queue;
     private events;
     private eventQueue;
+    private isInitialized;
     constructor();
+    private checkInitialization;
     /**
      * Initialized SDK
      * @param options
