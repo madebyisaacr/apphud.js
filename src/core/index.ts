@@ -590,8 +590,6 @@ export default class ApphudSDK implements Apphud {
         this.checkInitialization();
 
         this.ready((): void => {
-            log("Operate variables");
-
             const vars: NodeListOf<Element> = document.querySelectorAll(`[${VariableDataAttribute}]`);
 
             vars.forEach(elm => {
@@ -600,9 +598,14 @@ export default class ApphudSDK implements Apphud {
                 if (varName) {
                     const newVal = this.readVariableValueByKeyPath(varName)
 
-                    log("Replace variable,", varName, newVal)
+                    log("Replace variable", varName, newVal)
 
                     if (newVal) {
+                        const suffixes = ["old-price", "new-price", "full-price"];
+                        if (suffixes.some(suffix => varName.endsWith(suffix))) {
+                            this.track("paywall_shown", { paywall_id: this._currentPaywall?.id, placement_id: this._currentPlacement?.id }, {});
+                        }
+
                         elm.innerHTML = newVal
                     }
                 }
