@@ -55,6 +55,7 @@ export default class ApphudSDK implements Apphud {
     private events: LifecycleEvents = {}
     private eventQueue: EventData[] = []
     private isInitialized: boolean = false;
+    private isPaywallShown: boolean = false;
     // private params = new URLSearchParams(window.location.search);
 
     constructor() {}
@@ -602,8 +603,9 @@ export default class ApphudSDK implements Apphud {
 
                     if (newVal) {
                         const suffixes = ["old-price", "new-price", "full-price"];
-                        if (suffixes.some(suffix => varName.endsWith(suffix))) {
+                        if (suffixes.some(suffix => varName.endsWith(suffix)) && !this.isPaywallShown) {
                             this.track("paywall_shown", { paywall_id: this._currentPaywall?.id, placement_id: this._currentPlacement?.id }, {});
+                            this.isPaywallShown = true;
                         }
 
                         elm.innerHTML = newVal
