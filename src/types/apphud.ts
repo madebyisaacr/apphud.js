@@ -194,7 +194,8 @@ export interface Apphud {
 
 export type Config = {
     apiKey: string
-    _baseURL: string
+    baseURL: string
+    baseSuccessURL: string
     redirectDelay: number
     debug: boolean
     language: string
@@ -202,8 +203,8 @@ export type Config = {
     httpRetriesCount: number
     httpRetryDelay: number
     headers: HeadersInit
-    _stripeLiveKey: string
-    _stripeTestKey: string
+    stripeLiveKey: string
+    stripeTestKey: string
 }
 
 export interface EventData {

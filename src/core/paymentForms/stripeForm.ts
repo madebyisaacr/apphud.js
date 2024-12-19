@@ -23,10 +23,10 @@ class StripeForm implements PaymentForm {
 
     constructor(private user: User, private providerId: string, private accountId: string, private formBuilder: FormBuilder) {
         documentReady(async () => {
-            let key = config._stripeLiveKey
+            let key = config.stripeLiveKey
 
             if (config.debug) {
-                key = config._stripeTestKey
+                key = config.stripeTestKey
             }
 
             this.stripe = await loadStripe(key, {stripeAccount: this.accountId})
@@ -226,7 +226,7 @@ class StripeForm implements PaymentForm {
                     if (options?.successUrl) {
                         document.location.href = options?.successUrl
                     } else {
-                        document.location.href = process.env.SUCCESS_URL!+'/'+deepLink
+                        document.location.href = config.baseSuccessURL+'/'+deepLink
                     }
                 }, config.redirectDelay)
             }

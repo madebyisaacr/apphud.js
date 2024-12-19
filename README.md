@@ -23,7 +23,7 @@ The `ApphudSDK` provides a powerful and flexible way to manage in-app purchases,
 To start using the ApphudSDK, include the SDK JavaScript file in your project. You can download the SDK or include it via a `<script>` tag.
 
 ```html
-<script src="web-1.0.0.min.js"></script>
+<script src="https://js.apphud.com/web/v1/apphud.js"></script>
 ```
 
 ---

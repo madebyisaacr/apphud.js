@@ -32,7 +32,7 @@ const baseHeaders = (): HeadersInit => {
  * @param data - user data
  */
 const createUser = async (data: CustomerData): Promise<User> => {
-    const response = await sendRequest('POST', router.userUrl, data)
+    const response = await sendRequest('POST', router.userUrl(), data)
 
     return response.data.results as User;
 }
@@ -48,7 +48,7 @@ const setAttribution = async (deviceId: string, data: AttributionData): Promise<
  * @param data - event data
  */
 const createEvent = async (data: Events): Promise<Message> => {
-    const response = await sendRequest('POST', router.eventUrl, data)
+    const response = await sendRequest('POST', router.eventUrl(), data)
 
     return response.data.results as Message;
 }

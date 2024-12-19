@@ -2,7 +2,8 @@ import {Config} from '../../types'
 
 export const config: Config = {
     apiKey: "",
-    _baseURL: process.env.BASE_URL!,
+    baseURL: "https://api.apphud.com/v1",
+    baseSuccessURL: "https://getapp.apphud.com",
     debug: false,
     websiteVersion: '0.0.1',
     httpRetriesCount: 3,
@@ -10,6 +11,6 @@ export const config: Config = {
     httpRetryDelay: 1000,
     redirectDelay: 1000,
     headers: {},
-    _stripeLiveKey: process.env.APPHUD_STRIPE_LIVE_KEY!,
-    _stripeTestKey: process.env.APPHUD_STRIPE_TEST_KEY!,
+    stripeLiveKey: "pk_live_4iYTlDlSJeqsh5ZAZNuDsLte004vt1l4tS",
+    stripeTestKey: "pk_test_leENTjttGVwRY2ZkCk0UaaiG00oeNHfn4o",
 };
