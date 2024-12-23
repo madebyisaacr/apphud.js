@@ -1,4 +1,5 @@
 import { PaymentProviderKind } from "./apphud";
+import { Appearance, Layout } from "@stripe/stripe-js";
 export interface PaymentForm {
     show: (productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions) => Promise<void>;
 }
@@ -11,6 +12,7 @@ export interface PaymentFormBuilder {
 export interface PaymentProviderFormOptions {
     successUrl?: string;
     failureUrl?: string;
+    stripeAppearance?: StripeAppearanceOptions;
 }
 export interface Country {
     name: string;
@@ -21,4 +23,9 @@ export interface LifecycleEvent {
     event: any;
 }
 export type LifecycleEventCallback = (event: LifecycleEvent) => void;
+export interface StripeAppearanceOptions {
+    theme?: Appearance['theme'];
+    variables?: Appearance['variables'];
+    layout?: Layout;
+}
 //# sourceMappingURL=paymentForm.d.ts.map
