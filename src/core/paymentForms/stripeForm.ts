@@ -6,7 +6,14 @@ import {
     SelectedProductDuration,
 } from "../config/constants"
 import {PaymentForm, PaymentProviderFormOptions, Subscription, User} from "../../types"
-import {loadStripe, Stripe, StripeElements, StripePaymentElement} from "@stripe/stripe-js";
+import {
+    loadStripe,
+    Stripe,
+    StripeElements,
+    StripePaymentElement,
+    StripeElementsOptions,
+    StripePaymentElementOptions
+} from "@stripe/stripe-js";
 import {setCookie} from "../../cookies";
 import {config} from "../config/config";
 import FormBuilder from "./formBuilder";
@@ -61,7 +68,7 @@ class StripeForm implements PaymentForm {
         log("Create stripe subscription", productId)
         await this.createSubscription(productId, paywallId, placementId)
 
-        this.initStripe()
+        this.initStripe(options)
 
         if (!this.paymentElement) {
             logError("Payment element was not created")
@@ -124,14 +131,34 @@ class StripeForm implements PaymentForm {
     /**
      * Initialize Stripe elements
      * @private
+     * @param options - Payment form options including Stripe UI customization
      */
-    private initStripe(): void {
+    private initStripe(options?: PaymentProviderFormOptions): void {
         if (!this.stripe) {
             logError('No stripe initialized')
             return
         }
-        this.elements = this.stripe.elements({clientSecret: this.subscription!.client_secret, loader: "always"})
-        this.paymentElement = this.elements.create('payment')
+
+        const stripeAppearance = options?.stripeAppearance && {
+            theme: options.stripeAppearance.theme,
+            variables: options.stripeAppearance.variables,
+        }
+
+        // Define elements options
+        const elementsOptions: StripeElementsOptions = {
+            clientSecret: this.subscription!.client_secret,
+            loader: "always",
+            appearance: stripeAppearance
+        }
+
+        this.elements = this.stripe.elements(elementsOptions)
+            
+        // Define payment element options
+        const paymentElementOptions: StripePaymentElementOptions = {
+            layout: options?.stripeAppearance?.layout
+        }
+
+        this.paymentElement = this.elements.create('payment', paymentElementOptions)
 
         this.paymentElement.on('loaderror', (event) => {
             this.setButtonState("ready")

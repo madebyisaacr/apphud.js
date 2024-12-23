@@ -34,6 +34,7 @@ declare class StripeForm implements PaymentForm {
     /**
      * Initialize Stripe elements
      * @private
+     * @param options - Payment form options including Stripe UI customization
      */
     private initStripe;
     /**
