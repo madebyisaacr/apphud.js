@@ -602,8 +602,7 @@ export default class ApphudSDK implements Apphud {
                     log("Replace variable", varName, newVal)
 
                     if (newVal) {
-                        const suffixes = ["old-price", "new-price", "full-price"];
-                        if (suffixes.some(suffix => varName.endsWith(suffix)) && !this.isPaywallShown) {
+                        if (varName.endsWith("price") && !this.isPaywallShown) {
                             this.track("paywall_shown", { paywall_id: this._currentPaywall?.id, placement_id: this._currentPlacement?.id }, {});
                             this.isPaywallShown = true;
                         }
