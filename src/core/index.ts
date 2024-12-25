@@ -578,10 +578,18 @@ export default class ApphudSDK implements Apphud {
             start_app_version: getCookie(StartAppVersionKey) || config.websiteVersion,
             need_paywalls: true,
             need_placements: true,
-            page_url: window.location.href,
+            page_url: this.currentPage(),
             user_agent: navigator.userAgent,
             ...params
         }
+    }
+
+    /**
+     * Current page URL without GET params
+     * @private
+     */
+    private currentPage(): string {
+        return window.location.origin + window.location.pathname;
     }
 
     /**
@@ -690,6 +698,11 @@ export default class ApphudSDK implements Apphud {
         return null
     }
 
+    /**
+     * Find placement by ID
+     * @param id - placement ID
+     * @private
+     */
     private findPlacementByID(id: string): Placement | undefined {
         const placement = this.placements.find(elm => elm.identifier === id);
         

@@ -138,6 +138,11 @@ export default class ApphudSDK implements Apphud {
      */
     private userParams;
     /**
+     * Current page URL without GET params
+     * @private
+     */
+    private currentPage;
+    /**
      * Replace variables on the page
      */
     operateVariables(): void;
@@ -152,6 +157,11 @@ export default class ApphudSDK implements Apphud {
      * @private
      */
     private readVariableValueByKeyPath;
+    /**
+     * Find placement by ID
+     * @param id - placement ID
+     * @private
+     */
     private findPlacementByID;
     /**
      * Set current placement, paywall, product
