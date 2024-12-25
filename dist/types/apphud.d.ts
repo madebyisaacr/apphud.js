@@ -13,6 +13,8 @@ export interface User {
     id: string;
     user_id: string;
     email: string | undefined | null;
+    locale?: string;
+    is_sandbox?: boolean;
     paywalls?: Paywall[];
     placements?: Placement[];
     prices?: Price[];
@@ -26,6 +28,7 @@ export interface PaymentProvider {
     identifier: string;
     kind: PaymentProviderKind;
     name: string;
+    token?: string;
 }
 export interface Placement {
     id: string;

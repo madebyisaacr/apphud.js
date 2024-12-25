@@ -19,6 +19,8 @@ export interface User {
     id: string
     user_id: string
     email: string | undefined | null
+    locale?: string
+    is_sandbox?: boolean
     paywalls?: Paywall[]
     placements?: Placement[]
     prices?: Price[]
@@ -32,7 +34,8 @@ export interface PaymentProvider {
     id: string
     identifier: string
     kind: PaymentProviderKind
-    name: string
+    name: string,
+    token?: string
 }
 
 export interface Placement {
