@@ -119,8 +119,8 @@ class PaddleForm implements PaymentForm {
             }],
             customData: {
                 apphud_client_id: this.user.id,
-                paywall_id: paywallId,
-                placement_id: placementId
+                paywall_id: paywallId ?? "unknown",
+                placement_id: placementId ?? "unknown",
             }
         }
 
