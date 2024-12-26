@@ -1,20 +1,47 @@
-import { PaymentForm } from "../../types";
+import { PaymentForm, PaymentProviderFormOptions, User, PaymentProvider } from "../../types";
 import FormBuilder from "./formBuilder";
 declare class PaddleForm implements PaymentForm {
-    private providerId;
-    private apiKey;
+    private user;
+    private provider;
     private formBuilder;
-    private elementID;
-    private form;
     private paddle;
-    constructor(providerId: string, apiKey: string, formBuilder: FormBuilder);
+    private submit;
+    private submitReadyText;
+    private submitProcessingText;
+    private currentOptions;
+    constructor(user: User, provider: PaymentProvider, formBuilder: FormBuilder);
+    private initializePaddleInstance;
     /**
-     * Show paddle form
-     * @param selector - element selector on page
+     * Show Paddle payment form
+     * @param productId - paddle price_id
      * @param paywallId - paywall user purchased from
      * @param placementId - placement id user purchased from
+     * @param options - Form options including success URL and appearance customization
      */
-    show(selector: string, paywallId: string | undefined, placementId: string | undefined): Promise<void>;
+    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions): Promise<void>;
+    private setupFormElements;
+    /**
+     * Setup checkout configuration and form submission handler
+     * @param productId - paddle price_id
+     * @param paywallId - paywall user purchased from
+     * @param placementId - placement id user purchased from
+     * @param options - Form options including success URL and appearance customization
+     * @private
+     */
+    private setupCheckout;
+    /**
+     * Handle Paddle checkout events
+     * @param event - Paddle event data
+     * @param options - Form options for handling success/failure redirects
+     * @private
+     */
+    private handlePaddleEvent;
+    /**
+     * Set payment button state
+     * @param state - Button state: "loading" | "ready" | "processing"
+     * @private
+     */
+    private setButtonState;
 }
 export default PaddleForm;
 //# sourceMappingURL=paddleForm.d.ts.map

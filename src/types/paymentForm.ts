@@ -15,6 +15,7 @@ export interface PaymentProviderFormOptions {
     successUrl?: string
     failureUrl?: string
     stripeAppearance?: StripeAppearanceOptions
+    paddleAppearance?: PaddleAppearanceOptions
 }
 
 export interface Country {
@@ -33,4 +34,8 @@ export interface StripeAppearanceOptions {
     theme?: Appearance['theme'];
     variables?: Appearance['variables'];
     layout?: Layout
+}
+
+export interface PaddleAppearanceOptions {
+  theme?: 'light' | 'dark';
 }

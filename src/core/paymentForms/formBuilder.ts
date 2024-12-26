@@ -31,7 +31,7 @@ class FormBuilder implements PaymentFormBuilder {
                 log("Start stripe form for account_id:", this.provider.identifier)
                 break
             case "paddle":
-                form = new PaddleForm(this.provider.id, this.provider.identifier, this)
+                form = new PaddleForm(this.user, this.provider, this)
                 log("Start paddle form for account_id:", this.provider.identifier)
                 break
             default:
