@@ -121,7 +121,10 @@ class PaddleForm implements PaymentForm {
                 apphud_client_id: this.user.id,
                 paywall_id: paywallId ?? "unknown",
                 placement_id: placementId ?? "unknown",
-            }
+            },
+            customer: this.user.email ? {
+                email: this.user.email
+            } : undefined
         }
 
         form.addEventListener('submit', async (event) => {
