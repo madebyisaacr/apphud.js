@@ -12,6 +12,7 @@ export interface PaymentFormBuilder {
 }
 
 export interface PaymentProviderFormOptions {
+    paymentProvider?: PaymentProviderKind;
     successUrl?: string
     failureUrl?: string
     stripeAppearance?: StripeAppearanceOptions

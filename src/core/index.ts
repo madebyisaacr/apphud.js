@@ -29,7 +29,8 @@ import {
     Paywall,
     Placement,
     Product,
-    User
+    User,
+    PaymentProviderKind
 } from '../types'
 
 import UserAgent from 'ua-parser-js'
@@ -238,6 +239,15 @@ export default class ApphudSDK implements Apphud {
         this.checkInitialization();
 
         this.ready(async (): Promise<void> => {
+
+            if (options.paymentProvider) {
+                log("Setting preferred payment provider:", options.paymentProvider)
+                this.setPaymentProvider(options.paymentProvider)
+            } else {
+                log("Payment form options:", options)
+                log("No preferred payment provider specified, using default")
+            }
+
             if (!this.currentProduct()) {
                 logError("Payment form: product is required")
                 return
@@ -408,18 +418,34 @@ export default class ApphudSDK implements Apphud {
     }
 
     /**
-     * Sets current payment provider
+     * Sets the current payment provider based on availability and preference
+     * @param preferredProvider - Optional. The preferred payment provider kind (e.g., "stripe" or "paddle").
+     *                           If specified and available, this provider will be used.
+     *                           If not specified or not available, falls back to the first available provider.
      * @private
      */
-    private setPaymentProvider(): void {
+    private setPaymentProvider(preferredProvider?: PaymentProviderKind): void {
         this.ready((): void => {
             const paymentProviders = this.user?.payment_providers || []
 
-            // get first payment provider
-            if (paymentProviders.length > 0) {
-                this.currentPaymentProvider = paymentProviders[0]
-                log("Set payment provider:", this.currentPaymentProvider)
+            if (paymentProviders.length === 0) {
+                return
             }
+
+            // Try to use preferred provider if specified
+            if (preferredProvider) {
+                const preferred = paymentProviders.find(provider => provider.kind === preferredProvider)
+                if (preferred) {
+                    this.currentPaymentProvider = preferred
+                    log("Set preferred payment provider:", this.currentPaymentProvider)
+                    return
+                }
+                logError(`Preferred payment provider ${preferredProvider} not available`)
+            }
+
+            // Fallback: use first available provider if no preference or preferred not available
+            this.currentPaymentProvider = paymentProviders[0]
+            log("Set default payment provider:", this.currentPaymentProvider)
         })
     }
 
