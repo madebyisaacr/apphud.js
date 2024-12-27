@@ -9,7 +9,6 @@ declare class PaddleForm implements PaymentForm {
     private submitReadyText;
     private submitProcessingText;
     private currentOptions;
-    private subscription;
     constructor(user: User, provider: PaymentProvider, formBuilder: FormBuilder);
     private initializePaddleInstance;
     /**
@@ -43,7 +42,6 @@ declare class PaddleForm implements PaymentForm {
      * @private
      */
     private setButtonState;
-    private createSubscription;
 }
 export default PaddleForm;
 //# sourceMappingURL=paddleForm.d.ts.map
