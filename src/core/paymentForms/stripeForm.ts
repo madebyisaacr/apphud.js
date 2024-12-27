@@ -250,7 +250,7 @@ class StripeForm implements PaymentForm {
                 }
 
                 setTimeout(() => {
-                    if (options?.successUrl) {
+                    if (options?.successUrl && options.successUrl !== 'undefined') {
                         document.location.href = options?.successUrl
                     } else {
                         document.location.href = config.baseSuccessURL+'/'+deepLink

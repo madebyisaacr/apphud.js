@@ -88,7 +88,10 @@ export default class ApphudSDK implements Apphud {
     private retrieveGtagClientID;
     private getQueryParamsAsJson;
     /**
-     * Sets current payment provider
+     * Sets the current payment provider based on availability and preference
+     * @param preferredProvider - Optional. The preferred payment provider kind (e.g., "stripe" or "paddle").
+     *                           If specified and available, this provider will be used.
+     *                           If not specified or not available, falls back to the first available provider.
      * @private
      */
     private setPaymentProvider;

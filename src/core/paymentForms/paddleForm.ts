@@ -1,9 +1,12 @@
 import {log, logError} from "../../utils";
 import {initializePaddle, Paddle, CheckoutOpenOptions, PaddleEventData} from '@paddle/paddle-js'
-import {PaymentForm, PaymentProviderFormOptions, User, PaymentProvider} from "../../types";
+import {PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, Subscription} from "../../types";
 import FormBuilder from "./formBuilder";
 import {PaymentFormContainer} from "../config/constants";
 import {config} from "../config/config";
+import api from "../api";
+import {setCookie} from "../../cookies";
+import {DeepLinkURL, SelectedProductDuration} from "../config/constants";
 
 class PaddleForm implements PaymentForm {
     private paddle: Paddle | null | undefined = null
@@ -11,6 +14,7 @@ class PaddleForm implements PaymentForm {
     private submitReadyText = "Subscribe"
     private submitProcessingText = "Please wait..."
     private currentOptions: PaymentProviderFormOptions | null = null
+    private subscription: Subscription | null = null
 
     constructor(private user: User, private provider: PaymentProvider, private formBuilder: FormBuilder) {
         this.initializePaddleInstance()
@@ -44,6 +48,12 @@ class PaddleForm implements PaymentForm {
         this.currentOptions = options
         log("Initializing Paddle payment form for product:", productId)
         this.formBuilder.emit("payment_form_initialized", { paymentProvider: "paddle", event: { selector: PaymentFormContainer } })
+
+        try {
+            await this.createSubscription(productId, paywallId, placementId)
+        } catch (error) {
+            logError('Failed to create subscription', error)
+        }
 
         // Wait for Paddle to be initialized if it hasn't been yet
         if (!this.paddle) {
@@ -172,9 +182,20 @@ class PaddleForm implements PaymentForm {
                         user_id: this.user.id,
                     }
                 })
-                if (options?.successUrl) {
-                    document.location.href = options.successUrl
+
+                const deepLink = this.subscription?.deep_link
+
+                if (deepLink) {
+                    setCookie(DeepLinkURL, deepLink, SelectedProductDuration)
                 }
+
+                setTimeout(() => {
+                    if (options?.successUrl && options.successUrl !== 'undefined') {
+                        document.location.href = options?.successUrl
+                    } else {
+                        document.location.href = config.baseSuccessURL+'/'+deepLink
+                    }
+                }, config.redirectDelay)
                 break;
                 
             case "checkout.error":
@@ -220,6 +241,28 @@ class PaddleForm implements PaymentForm {
                 this.submit.setAttribute("disabled", "disabled")
                 this.submit.innerText = this.submitProcessingText
                 break
+        }
+    }
+
+    /**
+     * Add new method for subscription creation
+     * @param productId - paddle price_id
+     * @param paywallId - paywall user purchased from
+     * @param placementId - placement id user purchased from
+     * @private
+     */
+    private async createSubscription(productId: string, paywallId: string | undefined, placementId: string | undefined): Promise<void> {
+        this.subscription = await api.createSubscription(this.provider.id, {
+            product_id: productId,
+            paywall_id: paywallId,
+            placement_id: placementId,
+            user_id: this.user.id,
+        })
+
+        if (!this.subscription) {
+            logError(`Subscription was not created for price_id`, productId)
+        } else {
+            log('Subscription created', this.subscription)
         }
     }
 }
