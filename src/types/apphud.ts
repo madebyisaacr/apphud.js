@@ -59,15 +59,25 @@ export interface Currency {
 
 export interface Product {
     id: string
-    name: string
     product_id: string
-    store?: string
     base_plan_id: string
+    name: string
+    payment_provider_id: string
+    store: PaymentProviderKind
     created_automatically?: boolean
     db_id?: string
-    payment_provider_id?: string
     store_id?: string
-    properties?: ApphudHash
+}
+
+export interface ProductBundle {
+    id: string
+    name: string
+    products: Product[]
+    properties?: {
+        [language: string]: {
+            [key: string]: string
+        }
+    }
 }
 
 export interface Paywall {
@@ -76,7 +86,7 @@ export interface Paywall {
     experiment_id: string | null
     identifier: string
     json: string
-    items: Product[]
+    items: ProductBundle[]
 }
 
 export interface Apphud {
@@ -165,7 +175,7 @@ export interface Apphud {
     /**
      * Selects a product for a given placement index.
      * @param {string} placementIndex - The index of the placement.
-     * @param {number} productIndex - The index of the product within the placement.
+     * @param {number} productIndex - The index of the product bundle within the placement.
      */
     selectPlacementProduct: (placementIndex: string, productIndex: number) => void;
 
@@ -251,4 +261,4 @@ export interface CustomerData {
     page_url: string
     user_agent: string
 }
-export type LifecycleEventName = "payment_form_initialized" | "ready" | "payment_form_ready" | "payment_success" | "payment_failure" | "product_changed"
+export type LifecycleEventName = "payment_form_initialized" | "ready" | "payment_form_ready" | "payment_success" | "payment_failure" | "product_changed" | "payment_provider_changed"

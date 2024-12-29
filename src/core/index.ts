@@ -7,10 +7,10 @@ import {
     DeepLinkURL,
     EventsKey,
     SelectedProductDuration,
-    SelectedProductIndex,
     StartAppVersionKey,
     UserCookieDuration,
-    UserIdKey
+    UserIdKey,
+    SelectedBundleIndex
 } from './config/constants';
 import {
     Apphud, AttributionData,
@@ -30,7 +30,8 @@ import {
     Placement,
     Product,
     User,
-    PaymentProviderKind
+    PaymentProviderKind,
+    ProductBundle
 } from '../types'
 
 import UserAgent from 'ua-parser-js'
@@ -46,7 +47,7 @@ export default class ApphudSDK implements Apphud {
     public placements: Placement[] = []
     public user: User | undefined = undefined
     public currentPaymentProvider: PaymentProvider | undefined = undefined
-    private _currentProduct: Product | undefined = undefined
+    private _currentProduct: Product | undefined | null = undefined
     private _currentPlacement: Placement | undefined = undefined
     private _currentPaywall: Paywall | undefined = undefined
     private userID: string | undefined = undefined
@@ -305,20 +306,102 @@ export default class ApphudSDK implements Apphud {
     }
 
     /**
-     * Save selected placement and price
-     * @param placementID - number of placement
-     * @param productIndex - number of price in placement paywall
+     * Save selected placement and bundle
+     * @param placementID - identifier of placement
+     * @param bundleIndex - index of product bundle in placement paywall
      */
-    public selectPlacementProduct(placementID: string, productIndex: number): void {
+    public selectPlacementProduct(placementID: string, bundleIndex: number): void {
         this.checkInitialization();
 
-        log("Save placement and product", placementID, productIndex)
+        log("Save placement and bundle", placementID, bundleIndex);
 
-        this.setCurrentItems(placementID, productIndex)
+        const placement = this.findPlacementByID(placementID);
+        if (!placement || placement.paywalls.length === 0) {
+            logError("No placement or paywall found for ID:", placementID);
+            return;
+        }
 
-        setCookie(SelectedProductIndex, `${placementID},${productIndex}`, SelectedProductDuration)
+        const paywall = placement.paywalls[0];
+        const selectedBundle = paywall.items[bundleIndex];
+        if (!selectedBundle) {
+            logError("No product bundle found at index:", bundleIndex);
+            return;
+        }
 
-        this.emit("product_changed", this.currentProduct())
+        // If we have a current payment provider, check compatibility
+        if (this.currentPaymentProvider) {
+            const compatibleProduct = this.findCompatibleProduct(selectedBundle, this.currentPaymentProvider);
+            if (!compatibleProduct) {
+                // Current provider is not compatible with selected product
+                const compatibleProviders = this.getCompatibleProviders(selectedBundle);
+                if (compatibleProviders.length > 0) {
+                    // Auto-switch to first compatible provider
+                    this.currentPaymentProvider = compatibleProviders[0];
+                    this.emit("payment_provider_changed", {
+                        provider: this.currentPaymentProvider,
+                        reason: "product_compatibility"
+                    });
+                } else {
+                    logError("No compatible payment providers found for selected product bundle");
+                    return;
+                }
+            }
+        }
+
+        this.setCurrentItems(placementID, bundleIndex);
+        setCookie(SelectedBundleIndex, `${placementID},${bundleIndex}`, SelectedProductDuration);
+        this.emit("product_changed", this.currentProduct());
+    }
+
+    /**
+     * Set current placement, paywall, product bundle and compatible product
+     * @param placementID - placement identifier
+     * @param bundleIndex - index of product bundle
+     * @private
+     */
+    private setCurrentItems(placementID: string, bundleIndex: number) {
+        this._currentPlacement = this.findPlacementByID(placementID);
+        if (this._currentPlacement && this._currentPlacement.paywalls.length > 0) {
+            this._currentPaywall = this._currentPlacement.paywalls[0];
+            const bundle = this._currentPaywall.items[bundleIndex];
+            
+            if (bundle) {
+                // Find compatible product from bundle based on current payment provider
+                if (this.currentPaymentProvider) {
+                    this._currentProduct = this.findCompatibleProduct(bundle, this.currentPaymentProvider);
+                } else {
+                    // If no payment provider is set, use the first product in the bundle
+                    this._currentProduct = bundle.products[0];
+                }
+
+                // Check for required price macros
+                if (bundle.properties) {
+                    const macrosToCheck = [
+                        'new-price',
+                        'old-price',
+                        'full-price',
+                        'discount',
+                        'duration',
+                        'custom-1',
+                        'custom-2',
+                        'custom-3'
+                    ];
+                
+                    const hasPriceMacros = Object.values(bundle.properties).some((langProps: Record<string, string>) => 
+                        macrosToCheck.some(macro => langProps[macro])
+                    );
+
+                    if (!hasPriceMacros) {
+                        logError(`Placement with identifier "${placementID}" was requested and found, but price macros are missing. Learn how to set up macros here: https://docs.apphud.com/docs/configure-web-placements#setting-up-product-macros`);
+                    }
+                }
+
+                log("Current placement", this._currentPlacement);
+                log("Current paywall", this._currentPaywall);
+                log("Current bundle", bundle);
+                log("Current product", this._currentProduct);
+            }
+        }
     }
 
     /**
@@ -436,7 +519,39 @@ export default class ApphudSDK implements Apphud {
             if (preferredProvider) {
                 const preferred = paymentProviders.find(provider => provider.kind === preferredProvider)
                 if (preferred) {
+                    // Check compatibility with current product if one is selected
+                    const currentProduct = this.currentProduct()
+                    if (currentProduct && currentProduct.store !== preferred.kind) {
+                        logError(`Selected product is not compatible with payment provider ${preferred.kind}`)
+                        
+                        // Try to find a compatible product in the current bundle
+                        const currentPaywall = this.currentPaywall()
+                        const savedIndices = this.getSavedPlacementBundleIndex()
+                        
+                        if (currentPaywall && savedIndices.bundleIndex) {
+                            const bundle = currentPaywall.items[savedIndices.bundleIndex]
+                            if (bundle) {
+                                const compatibleProduct = this.findCompatibleProduct(bundle, preferred)
+                                if (compatibleProduct) {
+                                    this._currentProduct = compatibleProduct
+                                    this.currentPaymentProvider = preferred
+                                    this.emit("payment_provider_changed", {
+                                        provider: preferred,
+                                        reason: "product_compatibility"
+                                    })
+                                    log("Set preferred payment provider:", this.currentPaymentProvider)
+                                    return
+                                }
+                            }
+                        }
+                        return
+                    }
+                    
                     this.currentPaymentProvider = preferred
+                    this.emit("payment_provider_changed", {
+                        provider: preferred,
+                        reason: "user_selection"
+                    })
                     log("Set preferred payment provider:", this.currentPaymentProvider)
                     return
                 }
@@ -468,10 +583,10 @@ export default class ApphudSDK implements Apphud {
             this.placements = this.user?.placements || []
 
             log("Placements", this.placements)
-            const saved = this.getSavedPlacementProductIndex()
+            const saved = this.getSavedPlacementBundleIndex()
 
             if (saved.placementID)
-                this.setCurrentItems(saved.placementID, saved.productIndex)
+                this.setCurrentItems(saved.placementID, saved.bundleIndex)
         })
     }
 
@@ -649,11 +764,12 @@ export default class ApphudSDK implements Apphud {
     }
 
     /**
-     * Get saved product index from cookies
+     * Get saved placement and bundle index from cookies
+     * @returns Object containing placementID and bundleIndex from saved selection
      * @private
      */
-    private getSavedPlacementProductIndex(): { placementID: string | undefined, productIndex: number } {
-        const savedIndices = getCookie(SelectedProductIndex)
+    private getSavedPlacementBundleIndex(): { placementID: string | undefined, bundleIndex: number } {
+        const savedIndices = getCookie(SelectedBundleIndex)
 
         if (savedIndices !== null) {
             const arr = savedIndices.split(',').map(s => s.trim());
@@ -661,14 +777,14 @@ export default class ApphudSDK implements Apphud {
             if (arr.length === 2) {
                 return {
                     placementID: arr[0],
-                    productIndex: parseInt(arr[1]),
+                    bundleIndex: parseInt(arr[1]),
                 }
             }
         }
 
         return {
             placementID: undefined,
-            productIndex: 0,
+            bundleIndex: 0,
         }
     }
 
@@ -682,7 +798,7 @@ export default class ApphudSDK implements Apphud {
 
         // default indices
         let placementID: string | undefined = undefined
-        let productIndex = 0
+        let bundleIndex = 0
 
         // last element of string '0,1,path.to.var'
         // returns path.to.var
@@ -690,20 +806,20 @@ export default class ApphudSDK implements Apphud {
 
         if (keyArr.length == 3) {
             placementID = keyArr[0]
-            productIndex = parseInt(keyArr[1])
+            bundleIndex = parseInt(keyArr[1])
 
             // if some of the parts are negative - get either saved values or default 0,0
-            if (placementID === null || productIndex < 0) {
-                const savedPlacementProduct = this.getSavedPlacementProductIndex()
+            if (placementID === null || bundleIndex < 0) {
+                const savedPlacementBundle = this.getSavedPlacementBundleIndex()
 
-                placementID = savedPlacementProduct.placementID
-                productIndex = savedPlacementProduct.productIndex
+                placementID = savedPlacementBundle.placementID
+                bundleIndex = savedPlacementBundle.bundleIndex
             }
         } else if (keyArr.length === 1) {
-            const savedPlacementProduct = this.getSavedPlacementProductIndex()
+            const savedPlacementBundle = this.getSavedPlacementBundleIndex()
 
-            placementID = savedPlacementProduct.placementID
-            productIndex = savedPlacementProduct.productIndex
+            placementID = savedPlacementBundle.placementID
+            bundleIndex = savedPlacementBundle.bundleIndex
         }
 
         const placement = this.findPlacementByID(placementID!)
@@ -713,12 +829,12 @@ export default class ApphudSDK implements Apphud {
             return null
         }
 
-        log("Placement", placementID, productIndex)
+        log("Placement", placementID, bundleIndex)
         const paywall = placement.paywalls[0]!
-        const product = paywall!.items[productIndex]
+        const bundle = paywall!.items[bundleIndex]
         
-        if (product !== null && product !== undefined && product.properties !== undefined) {
-            return u.getValueByPath(product.properties, path)
+        if (bundle !== null && bundle !== undefined && bundle.properties !== undefined) {
+            return u.getValueByPath(bundle.properties, path)
         }
 
         return null
@@ -740,47 +856,6 @@ export default class ApphudSDK implements Apphud {
         return placement;
     }
 
-    /**
-     * Set current placement, paywall, product
-     * @param placementID
-     * @param productIndex
-     * @private
-     */
-    private setCurrentItems(placementID: string, productIndex: number) {
-        this._currentPlacement = this.findPlacementByID(placementID)
-        if (this._currentPlacement !== null && this._currentPlacement !== undefined && this._currentPlacement.paywalls.length > 0) {
-            this._currentPaywall = this._currentPlacement.paywalls[0]
-            this._currentProduct = this._currentPaywall.items[productIndex]
-
-            // Check for required price macros
-            const product = this._currentProduct;
-            if (product && product.properties) {
-                const macrosToCheck = [
-                    'new-price',
-                    'old-price',
-                    'full-price',
-                    'discount',
-                    'duration',
-                    'custom-1',
-                    'custom-2',
-                    'custom-3'
-                ];
-            
-                const hasPriceMacros = Object.values(product.properties).some((langProps: Record<string, string>) => 
-                    macrosToCheck.some(macro => langProps[macro])
-                );
-
-                if (!hasPriceMacros) {
-                    logError(`Placement with identifier "${placementID}" was requested and found, but price macros are missing. Learn how to set up macros here: https://docs.apphud.com/docs/configure-web-placements#setting-up-product-macros`);
-                }
-            }
-
-            log("Current placement", this._currentPlacement)
-            log("Current paywall", this._currentPaywall)
-            log("Current product", this._currentProduct)
-        }
-    }
-
     public currentProduct(): Product | null {
         this.checkInitialization();
         
@@ -790,7 +865,16 @@ export default class ApphudSDK implements Apphud {
         const paywall = this.currentPaywall()
 
         if (paywall !== null && paywall !== undefined) {
-            return paywall!.items[0]
+            // Get first bundle
+            const firstBundle = paywall.items[0];
+            if (firstBundle && firstBundle.products.length > 0) {
+                // If we have a current payment provider, find compatible product
+                if (this.currentPaymentProvider) {
+                    return this.findCompatibleProduct(firstBundle, this.currentPaymentProvider);
+                }
+                // Otherwise return first product in bundle
+                return firstBundle.products[0];
+            }
         }
 
         return null
@@ -838,5 +922,25 @@ export default class ApphudSDK implements Apphud {
             log('not ready push to queue', callback);
             this.queue.push(callback);
         }
+    }
+
+    private isProductCompatibleWithProvider(product: Product, provider: PaymentProvider): boolean {
+        return product.store === provider.kind && product.payment_provider_id === provider.id;
+    }
+
+    private findCompatibleProduct(bundle: ProductBundle, provider: PaymentProvider): Product | null {
+        return bundle.products.find(product => this.isProductCompatibleWithProvider(product, provider)) || null;
+    }
+
+    private getCompatibleProviders(bundle: ProductBundle): PaymentProvider[] {
+        const compatibleProviders: PaymentProvider[] = [];
+        
+        if (!this.user?.payment_providers) {
+            return compatibleProviders;
+        }
+
+        return this.user.payment_providers.filter(provider => 
+            bundle.products.some(product => this.isProductCompatibleWithProvider(product, provider))
+        );
     }
 }
