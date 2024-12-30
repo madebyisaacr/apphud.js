@@ -69,11 +69,18 @@ export default class ApphudSDK implements Apphud {
      */
     paymentForm(options: PaymentProviderFormOptions, product?: string): void;
     /**
-     * Save selected placement and price
-     * @param placementID - number of placement
-     * @param productIndex - number of price in placement paywall
+     * Save selected placement and bundle
+     * @param placementID - identifier of placement
+     * @param bundleIndex - index of product bundle in placement paywall
      */
-    selectPlacementProduct(placementID: string, productIndex: number): void;
+    selectPlacementProduct(placementID: string, bundleIndex: number): void;
+    /**
+     * Set current placement, paywall, product bundle and compatible product
+     * @param placementID - placement identifier
+     * @param bundleIndex - index of product bundle
+     * @private
+     */
+    private setCurrentItems;
     /**
      * Set attribution data to user
      * @param data - attribution data dictionary
@@ -88,7 +95,10 @@ export default class ApphudSDK implements Apphud {
     private retrieveGtagClientID;
     private getQueryParamsAsJson;
     /**
-     * Sets current payment provider
+     * Sets the current payment provider based on availability and preference
+     * @param preferredProvider - Optional. The preferred payment provider kind (e.g., "stripe" or "paddle").
+     *                           If specified and available, this provider will be used.
+     *                           If not specified or not available, falls back to the first available provider.
      * @private
      */
     private setPaymentProvider;
@@ -147,10 +157,11 @@ export default class ApphudSDK implements Apphud {
      */
     operateVariables(): void;
     /**
-     * Get saved product index from cookies
+     * Get saved placement and bundle index from cookies
+     * @returns Object containing placementID and bundleIndex from saved selection
      * @private
      */
-    private getSavedPlacementProductIndex;
+    private getSavedPlacementBundleIndex;
     /**
      * Get variable value by name
      * @param key - variable name. Example: `product1.description.price`
@@ -163,13 +174,6 @@ export default class ApphudSDK implements Apphud {
      * @private
      */
     private findPlacementByID;
-    /**
-     * Set current placement, paywall, product
-     * @param placementID
-     * @param productIndex
-     * @private
-     */
-    private setCurrentItems;
     currentProduct(): Product | null;
     currentPlacement(): Placement | null;
     currentPaywall(): Paywall | null;
@@ -179,5 +183,8 @@ export default class ApphudSDK implements Apphud {
      * @private
      */
     private ready;
+    private isProductCompatibleWithProvider;
+    private findCompatibleProduct;
+    private getCompatibleProviders;
 }
 //# sourceMappingURL=index.d.ts.map

@@ -172,9 +172,28 @@ const timestamp = (): number => {
 }
 
 const getValueByPath = (obj: ApphudHash, path: string): string | null => {
-    obj = obj[config.language] || obj["en"]
+    // Try requested language first
+    let langObj = obj[config.language];
+    
+    // If not found, try English
+    if (!langObj) {
+        langObj = obj["en"];
+    }
+    
+    // If still not found, use first available language
+    if (!langObj) {
+        const availableLanguages = Object.keys(obj);
+        if (availableLanguages.length > 0) {
+            langObj = obj[availableLanguages[0]];
+        }
+    }
 
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj as any)
+    // If no language object found at all, return null
+    if (!langObj) {
+        return null;
+    }
+
+    return path.split('.').reduce((acc, part) => acc && acc[part], langObj as any);
 }
 
 const roundTo = (value: number, decimals: number): string => {

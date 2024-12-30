@@ -10,6 +10,7 @@ export interface PaymentFormBuilder {
     show: (productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions) => void;
 }
 export interface PaymentProviderFormOptions {
+    paymentProvider?: PaymentProviderKind;
     successUrl?: string;
     failureUrl?: string;
     stripeAppearance?: StripeAppearanceOptions;

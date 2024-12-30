@@ -65,8 +65,24 @@ class StripeForm implements PaymentForm {
             this.submitReadyText = this.submit.innerText
         }
 
-        log("Create stripe subscription", productId)
-        await this.createSubscription(productId, paywallId, placementId)
+        try {
+            log("Create stripe subscription", productId)
+            await this.createSubscription(productId, paywallId, placementId)
+        } catch (error) {
+            logError("Failed to create stripe subscription:", error)
+            this.setButtonState("ready")
+            
+            const errorElement = document.querySelector('#error-message')
+            if (errorElement) {
+                errorElement.textContent = "Failed to initialize payment form. Please try again."
+            }
+            
+            this.formBuilder.emit("payment_failure", {
+                paymentProvider: "stripe",
+                event: { error }
+            })
+            return
+        }
 
         this.initStripe(options)
 
@@ -114,17 +130,22 @@ class StripeForm implements PaymentForm {
      * @private
      */
     private async createSubscription(productId: string, paywallId: string | undefined, placementId: string | undefined): Promise<void> {
-        this.subscription = await api.createSubscription(this.providerId, {
-            product_id: productId,
-            paywall_id: paywallId,
-            placement_id: placementId,
-            user_id: this.user.id,
-        })
+        try {
+            this.subscription = await api.createSubscription(this.providerId, {
+                product_id: productId,
+                paywall_id: paywallId,
+                placement_id: placementId,
+                user_id: this.user.id,
+            })
 
-        if (!this.subscription) {
-            logError(`Subscription was not created for price_id`, productId)
-        } else {
+            if (!this.subscription) {
+                throw new Error(`Subscription was not created for price_id ${productId}`);
+            }
+            
             log('Subscription created', this.subscription)
+        } catch (error) {
+            logError(`Subscription was not created for price_id ${productId}`, error)
+            throw error; // Re-throw to be caught by the outer try-catch in show()
         }
     }
 
@@ -250,7 +271,7 @@ class StripeForm implements PaymentForm {
                 }
 
                 setTimeout(() => {
-                    if (options?.successUrl) {
+                    if (options?.successUrl && options.successUrl !== 'undefined') {
                         document.location.href = options?.successUrl
                     } else {
                         document.location.href = config.baseSuccessURL+'/'+deepLink
