@@ -459,7 +459,7 @@ export default class ApphudSDK implements Apphud {
     private prepareApphudAttributionData(): Record<string, string | string[] | null> {
         const data = this.getQueryParamsAsJson()
         data["user_agent"] = navigator.userAgent
-        data["referrer"] = document.referrer
+        data["referrer"] = document.location.origin + document.location.pathname
 
         return data
     }
