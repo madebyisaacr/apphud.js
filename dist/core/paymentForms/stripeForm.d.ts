@@ -13,7 +13,12 @@ declare class StripeForm implements PaymentForm {
     private submit;
     private submitReadyText;
     private submitProcessingText;
+    private customer;
+    private currentProductId;
+    private currentPaywallId;
+    private currentPlacementId;
     constructor(user: User, providerId: string, accountId: string, formBuilder: FormBuilder);
+    private injectStyles;
     /**
      * Show Stripe form
      * @param productId - stripe price_id
@@ -28,9 +33,12 @@ declare class StripeForm implements PaymentForm {
      * @param productId - stripe price_id
      * @param paywallId - paywall user purchased from
      * @param placementId - placement id user purchased from
+     * @param customerId - customer id
+     * @param paymentMethodId - payment method id
      * @private
      */
     private createSubscription;
+    private createCustomer;
     /**
      * Initialize Stripe elements
      * @private
@@ -43,6 +51,7 @@ declare class StripeForm implements PaymentForm {
      * @private
      */
     private setupForm;
+    private ensureHttpsUrl;
 }
 export default StripeForm;
 //# sourceMappingURL=stripeForm.d.ts.map
