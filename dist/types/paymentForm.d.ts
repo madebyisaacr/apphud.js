@@ -1,13 +1,13 @@
-import { PaymentProviderKind } from "./apphud";
+import { PaymentProviderKind, ProductBundle } from "./apphud";
 import { Appearance, Layout } from "@stripe/stripe-js";
 export interface PaymentForm {
-    show: (productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions) => Promise<void>;
+    show: (productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions, subscriptionOptions?: SubscriptionOptions) => Promise<void>;
 }
 export type LifecycleEvents = {
     [eventName: string]: LifecycleEventCallback[];
 };
 export interface PaymentFormBuilder {
-    show: (productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions) => void;
+    show: (productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions, bundle?: ProductBundle) => Promise<void>;
 }
 export interface PaymentProviderFormOptions {
     paymentProvider?: PaymentProviderKind;
@@ -32,5 +32,9 @@ export interface StripeAppearanceOptions {
 }
 export interface PaddleAppearanceOptions {
     theme?: 'light' | 'dark';
+}
+export interface SubscriptionOptions {
+    trialDays?: number;
+    discountId?: string;
 }
 //# sourceMappingURL=paymentForm.d.ts.map

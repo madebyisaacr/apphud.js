@@ -5,7 +5,7 @@ import {
     DeepLinkURL,
     SelectedProductDuration,
 } from "../config/constants"
-import {CustomerSetup, PaymentForm, PaymentProviderFormOptions, Subscription, User} from "../../types"
+import {CustomerSetup, PaymentForm, PaymentProviderFormOptions, Subscription, User, SubscriptionOptions} from "../../types"
 import {
     loadStripe,
     Stripe,
@@ -35,6 +35,7 @@ class StripeForm implements PaymentForm {
     private currentProductId: string | null = null;
     private currentPaywallId: string | undefined;
     private currentPlacementId: string | undefined;
+    private subscriptionOptions?: SubscriptionOptions;
 
     constructor(private user: User, private providerId: string, private accountId: string, private formBuilder: FormBuilder) {
         documentReady(async () => {
@@ -59,23 +60,20 @@ class StripeForm implements PaymentForm {
             .stripe-element-container {
                 display: flex;
                 flex-direction: column;
-                gap: 20px;
+                gap: 12px;
             }
 
             .stripe-element {
-                height: 40px;
-                padding: 0 12px;
+                min-height: 40px;
+                background-color: white;
                 border: 1px solid #e6e6e6;
                 border-radius: 6px;
-                background-color: white;
-                transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-                display: flex;
-                align-items: center;
+                padding: 0;
             }
 
             .stripe-row {
                 display: flex;
-                gap: 20px;
+                gap: 12px;
             }
 
             .stripe-column {
@@ -89,11 +87,18 @@ class StripeForm implements PaymentForm {
 
             .stripe-element--invalid {
                 border-color: #dc3545;
-                box-shadow: 0 1px 3px 0 rgba(220, 53, 69, 0.3);
             }
 
             .stripe-element--complete {
                 border-color: #28a745;
+            }
+
+            #card-number-element,
+            #card-expiry-element,
+            #card-cvc-element {
+                padding: 10px 12px;
+                width: 100%;
+                height: 100%;
             }
         `;
 
@@ -109,11 +114,19 @@ class StripeForm implements PaymentForm {
      * @param paywallId - paywall user purchased from
      * @param placementId - placement id user purchased from
      * @param options - Form options. Success URL / Failure URL
+     * @param subscriptionOptions - Optional subscription options
      */
-    public async show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions): Promise<void> {
+    public async show(
+        productId: string, 
+        paywallId: string | undefined, 
+        placementId: string | undefined, 
+        options: PaymentProviderFormOptions,
+        subscriptionOptions?: SubscriptionOptions
+    ): Promise<void> {
         this.currentProductId = productId;
         this.currentPaywallId = paywallId;
         this.currentPlacementId = placementId;
+        this.subscriptionOptions = subscriptionOptions;
         this.formBuilder.emit("payment_form_initialized", { paymentProvider: "stripe", event: { selector: PaymentFormContainer } })
 
         const submitButton = document.querySelector('#submit')
@@ -188,20 +201,31 @@ class StripeForm implements PaymentForm {
      * @param paymentMethodId - payment method id
      * @private
      */
-    private async createSubscription(productId: string, paywallId: string | undefined, placementId: string | undefined, customerId: string, paymentMethodId: string): Promise<void> {
-        this.subscription = await api.createSubscription(this.providerId, {
+    private async createSubscription(
+        productId: string, 
+        paywallId: string | undefined, 
+        placementId: string | undefined, 
+        customerId: string, 
+        paymentMethodId: string
+    ): Promise<void> {
+        const payload = {
             product_id: productId,
             paywall_id: paywallId,
             placement_id: placementId,
             user_id: this.user.id,
             customer_id: customerId,
             payment_method_id: paymentMethodId,
-        });
-    
+            ...(this.subscriptionOptions?.trialDays && { trial_period_days: this.subscriptionOptions.trialDays }),
+            ...(this.subscriptionOptions?.discountId && { discount_id: this.subscriptionOptions.discountId })
+        };
+
+        log('Creating subscription with payload:', payload);
+        this.subscription = await api.createSubscription(this.providerId, payload);
+
         if (!this.subscription) {
             throw new Error('Subscription was not created');
         }
-    
+
         log('Subscription created', this.subscription);
     }    
 
@@ -258,7 +282,8 @@ class StripeForm implements PaymentForm {
                 fontSize: '16px',
                 '::placeholder': {
                     color: '#aab7c4'
-                }
+                },
+                padding: '10px 12px',
             },
             invalid: {
                 color: '#dc3545',
@@ -279,88 +304,59 @@ class StripeForm implements PaymentForm {
             style: defaultStyles,
             classes: elementClasses,
             showIcon: true,
-            placeholder: '1234 1234 1234 1234',
         };
 
         const cardExpiryOptions: StripeCardExpiryElementOptions = {
             style: defaultStyles,
             classes: elementClasses,
-            placeholder: 'MM / YY',
         };
 
         const cardCvcOptions: StripeCardCvcElementOptions = {
             style: defaultStyles,
             classes: elementClasses,
-            placeholder: 'CVC',
         };
 
-        // Create the card elements
+        // Create and mount elements
         const cardNumberElement = this.elements.create('cardNumber', cardNumberOptions);
         const cardExpiryElement = this.elements.create('cardExpiry', cardExpiryOptions);
         const cardCvcElement = this.elements.create('cardCvc', cardCvcOptions);
 
-        // Mount each element with improved layout
+        // Mount elements with simpler container structure
         const paymentElementContainer = document.getElementById(this.elementID);
         if (paymentElementContainer) {
-            paymentElementContainer.className = 'stripe-element-container';
+            paymentElementContainer.innerHTML = `
+                <div class="stripe-element-container">
+                    <div id="card-number-element"></div>
+                    <div class="stripe-row">
+                        <div class="stripe-column">
+                            <div id="card-expiry-element"></div>
+                        </div>
+                        <div class="stripe-column">
+                            <div id="card-cvc-element"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
 
-            // Card Number Row
-            const cardNumberRow = document.createElement('div');
-            const cardNumberDiv = document.createElement('div');
-            cardNumberDiv.id = 'card-number-element';
-            cardNumberRow.appendChild(cardNumberDiv);
-            paymentElementContainer.appendChild(cardNumberRow);
-
-            // Expiry and CVC Row
-            const secondRow = document.createElement('div');
-            secondRow.className = 'stripe-row';
-
-            // Expiry Date Container
-            const cardExpiryContainer = document.createElement('div');
-            cardExpiryContainer.className = 'stripe-column';
-            const cardExpiryDiv = document.createElement('div');
-            cardExpiryDiv.id = 'card-expiry-element';
-            cardExpiryContainer.appendChild(cardExpiryDiv);
-
-            // CVC Container
-            const cardCvcContainer = document.createElement('div');
-            cardCvcContainer.className = 'stripe-column';
-            const cardCvcDiv = document.createElement('div');
-            cardCvcDiv.id = 'card-cvc-element';
-            cardCvcContainer.appendChild(cardCvcDiv);
-
-            secondRow.appendChild(cardExpiryContainer);
-            secondRow.appendChild(cardCvcContainer);
-            paymentElementContainer.appendChild(secondRow);
-
-            // Mount the elements
             cardNumberElement.mount('#card-number-element');
             cardExpiryElement.mount('#card-expiry-element');
             cardCvcElement.mount('#card-cvc-element');
         }
 
-        // Store the elements for later use
-        this.paymentElement = cardNumberElement
+        this.paymentElement = cardNumberElement;
 
-        // Add event listeners for error handling and readiness
-        cardNumberElement.on('loaderror', (event) => {
-            this.setButtonState("ready")
-
+        // Event listeners
+        cardNumberElement.on('change', (event) => {
             const displayError = document.querySelector("#card-errors")
-            if (!displayError) return
-            if (!event) return
-
-            if (event.error) {
-                displayError.textContent = event.error.message || ""
-            } else {
-                displayError.textContent = ""
+            if (displayError && event.error) {
+                displayError.textContent = event.error.message
             }
-        })
+        });
 
-        cardNumberElement.on("ready", (e) => {
+        cardNumberElement.on('ready', (e) => {
             this.setButtonState("ready")
             this.formBuilder.emit("payment_form_ready", { paymentProvider: "stripe", event: e })
-        })
+        });
     }
 
     /**

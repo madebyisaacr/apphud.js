@@ -4,7 +4,8 @@ import {
     PaymentFormBuilder, LifecycleEventCallback,
     PaymentProvider,
     PaymentProviderFormOptions,
-    User, LifecycleEvents
+    User, LifecycleEvents,
+    ProductBundle
 } from "../../types";
 import StripeForm from "./stripeForm";
 import PaddleForm from "./paddleForm";
@@ -22,9 +23,22 @@ class FormBuilder implements PaymentFormBuilder {
      * @param placementId - placement id user purchased from
      * @param options - Form options. Success URL / Failure URL
      */
-    async show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions): Promise<void> {
+    async show(
+        productId: string, 
+        paywallId: string | undefined, 
+        placementId: string | undefined, 
+        options: PaymentProviderFormOptions,
+        bundle?: ProductBundle
+    ): Promise<void> {
         let form: PaymentForm
-        // implement different types of elements
+
+        const introOffer = bundle?.properties?.introductory_offer;
+        const subscriptionOptions = {
+            trialDays: introOffer?.stripe_free_trial_days ? 
+                parseInt(introOffer.stripe_free_trial_days) : undefined,
+            discountId: introOffer?.discount_id
+        };
+
         switch (this.provider.kind) {
             case "stripe":
                 form = new StripeForm(this.user, this.provider.id, this.provider.identifier, this)
@@ -38,7 +52,14 @@ class FormBuilder implements PaymentFormBuilder {
                 throw new Error("Unsupported type " + this.provider.kind)
         }
 
-        await form.show(productId, paywallId, placementId, options)
+        // Pass subscription options along with other parameters
+        await form.show(
+            productId, 
+            paywallId, 
+            placementId, 
+            options, 
+            subscriptionOptions
+        )
     }
 
     /**

@@ -50,6 +50,7 @@ export default class ApphudSDK implements Apphud {
     private _currentProduct: Product | undefined | null = undefined
     private _currentPlacement: Placement | undefined = undefined
     private _currentPaywall: Paywall | undefined = undefined
+    private _currentBundle: ProductBundle | undefined = undefined
     private userID: string | undefined = undefined
     private hashedUserID: string | undefined = undefined
     private isReady: boolean = false
@@ -301,7 +302,7 @@ export default class ApphudSDK implements Apphud {
             })
 
             log("Show payment form for product:", productId)
-            await builder.show(productId, this.currentPaywall()!.id, this.currentPlacement()!.id, options)
+            await builder.show(productId, this.currentPaywall()!.id, this.currentPlacement()!.id, options, this._currentBundle)
         })
     }
 
@@ -366,6 +367,8 @@ export default class ApphudSDK implements Apphud {
             const bundle = this._currentPaywall.items[bundleIndex];
             
             if (bundle) {
+                this._currentBundle = bundle;
+                
                 // Find compatible product from bundle based on current payment provider
                 if (this.currentPaymentProvider) {
                     this._currentProduct = this.findCompatibleProduct(bundle, this.currentPaymentProvider);
@@ -398,7 +401,7 @@ export default class ApphudSDK implements Apphud {
 
                 log("Current placement", this._currentPlacement);
                 log("Current paywall", this._currentPaywall);
-                log("Current bundle", bundle);
+                log("Current bundle", this._currentBundle);
                 log("Current product", this._currentProduct);
             }
         }
@@ -854,6 +857,22 @@ export default class ApphudSDK implements Apphud {
         }
         
         return placement;
+    }
+
+    public currentBundle(): ProductBundle | null {
+        this.checkInitialization();
+        
+        if (this._currentBundle)
+            return this._currentBundle
+
+        const paywall = this.currentPaywall()
+
+        if (paywall !== null && paywall !== undefined) {
+            // Get first bundle
+            return paywall.items[0] || null;
+        }
+
+        return null
     }
 
     public currentProduct(): Product | null {

@@ -16,6 +16,8 @@ export interface SubscriptionParams {
     placement_id?: string;
     customer_id?: string;
     payment_method_id?: string;
+    trial_period_days?: number;
+    discount_id?: string;
 }
 export interface Subscription {
     id: string;

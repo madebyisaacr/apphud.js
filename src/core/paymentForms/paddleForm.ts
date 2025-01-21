@@ -1,6 +1,6 @@
 import {log, logError} from "../../utils";
 import {initializePaddle, Paddle, CheckoutOpenOptions, PaddleEventData} from '@paddle/paddle-js'
-import {PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, Subscription} from "../../types";
+import {PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, Subscription, SubscriptionOptions} from "../../types";
 import FormBuilder from "./formBuilder";
 import {PaymentFormContainer} from "../config/constants";
 import {config} from "../config/config";
@@ -43,14 +43,21 @@ class PaddleForm implements PaymentForm {
      * @param paywallId - paywall user purchased from
      * @param placementId - placement id user purchased from
      * @param options - Form options including success URL and appearance customization
+     * @param subscriptionOptions - Subscription options for the subscription
      */
-    public async show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions): Promise<void> {
+    public async show(
+        productId: string, 
+        paywallId: string | undefined, 
+        placementId: string | undefined, 
+        options: PaymentProviderFormOptions,
+        subscriptionOptions?: SubscriptionOptions
+    ): Promise<void> {
         this.currentOptions = options
         log("Initializing Paddle payment form for product:", productId)
         this.formBuilder.emit("payment_form_initialized", { paymentProvider: "paddle", event: { selector: PaymentFormContainer } })
 
         try {
-            await this.createSubscription(productId, paywallId, placementId)
+            await this.createSubscription(productId, paywallId, placementId, subscriptionOptions)
         } catch (error) {
             logError('Failed to create subscription', error)
         }
@@ -249,15 +256,26 @@ class PaddleForm implements PaymentForm {
      * @param productId - paddle price_id
      * @param paywallId - paywall user purchased from
      * @param placementId - placement id user purchased from
+     * @param subscriptionOptions - Subscription options for the subscription
      * @private
      */
-    private async createSubscription(productId: string, paywallId: string | undefined, placementId: string | undefined): Promise<void> {
-        this.subscription = await api.createSubscription(this.provider.id, {
+    private async createSubscription(
+        productId: string, 
+        paywallId: string | undefined, 
+        placementId: string | undefined,
+        subscriptionOptions?: SubscriptionOptions
+    ): Promise<void> {
+        const payload = {
             product_id: productId,
             paywall_id: paywallId,
             placement_id: placementId,
             user_id: this.user.id,
-        })
+            ...(subscriptionOptions?.trialDays && { trial_period_days: subscriptionOptions.trialDays }),
+            ...(subscriptionOptions?.discountId && { discount_id: subscriptionOptions.discountId })
+        }
+
+        log('Creating subscription with payload:', payload);
+        this.subscription = await api.createSubscription(this.provider.id, payload)
 
         if (!this.subscription) {
             logError(`Subscription was not created for price_id`, productId)
