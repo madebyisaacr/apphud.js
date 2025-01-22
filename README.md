@@ -147,8 +147,14 @@ HTML
 ```
 JS
 ```javascript
-apphud.paymentForm();
+apphud.paymentForm({
+    paymentProvider: "stripe", // Required: "stripe" or "paddle"
+    successUrl: "https://your-success-url.com", // Optional
+});
 ```
+
+**Required parameters:**
+- `paymentProvider`: Payment provider to use ('stripe' or 'paddle')
 
 **Optional parameters:**
 - `successUrl`: Redirect URL after successful payment.
