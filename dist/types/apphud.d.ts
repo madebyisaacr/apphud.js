@@ -136,6 +136,11 @@ export interface Apphud {
      */
     currentPaywall: () => Paywall | null;
     /**
+     * Retrieves the current product bundle.
+     * @returns {ProductBundle | null} The current product bundle, or null if none is selected.
+     */
+    currentBundle: () => ProductBundle | null;
+    /**
      * A list of available placements.
      * @type {Placement[]}
      */

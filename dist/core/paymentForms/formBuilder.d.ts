@@ -1,4 +1,4 @@
-import { LifecycleEventName, PaymentFormBuilder, LifecycleEventCallback, PaymentProvider, PaymentProviderFormOptions, User } from "../../types";
+import { LifecycleEventName, PaymentFormBuilder, LifecycleEventCallback, PaymentProvider, PaymentProviderFormOptions, User, ProductBundle } from "../../types";
 declare class FormBuilder implements PaymentFormBuilder {
     private provider;
     private user;
@@ -11,7 +11,7 @@ declare class FormBuilder implements PaymentFormBuilder {
      * @param placementId - placement id user purchased from
      * @param options - Form options. Success URL / Failure URL
      */
-    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions): Promise<void>;
+    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions, bundle?: ProductBundle): Promise<void>;
     /**
      * Track event
      * @param eventName - event name

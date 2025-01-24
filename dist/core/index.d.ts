@@ -1,4 +1,4 @@
-import { Apphud, AttributionData, Config, ApphudHash, LifecycleEventCallback, LifecycleEventName, PaymentProvider, PaymentProviderFormOptions, Paywall, Placement, Product, User } from '../types';
+import { Apphud, AttributionData, Config, ApphudHash, LifecycleEventCallback, LifecycleEventName, PaymentProvider, PaymentProviderFormOptions, Paywall, Placement, Product, User, ProductBundle } from '../types';
 /**
  * The main interface for the Apphud SDK. This should be initialized
  * immediately when your app starts. Ensure that only a single instance
@@ -12,6 +12,7 @@ export default class ApphudSDK implements Apphud {
     private _currentProduct;
     private _currentPlacement;
     private _currentPaywall;
+    private _currentBundle;
     private userID;
     private hashedUserID;
     private isReady;
@@ -174,6 +175,7 @@ export default class ApphudSDK implements Apphud {
      * @private
      */
     private findPlacementByID;
+    currentBundle(): ProductBundle | null;
     currentProduct(): Product | null;
     currentPlacement(): Placement | null;
     currentPaywall(): Paywall | null;

@@ -1,4 +1,4 @@
-import { PaymentForm, PaymentProviderFormOptions, User } from "../../types";
+import { PaymentForm, PaymentProviderFormOptions, User, SubscriptionOptions } from "../../types";
 import FormBuilder from "./formBuilder";
 declare class StripeForm implements PaymentForm {
     private user;
@@ -13,24 +13,34 @@ declare class StripeForm implements PaymentForm {
     private submit;
     private submitReadyText;
     private submitProcessingText;
+    private customer;
+    private currentProductId;
+    private currentPaywallId;
+    private currentPlacementId;
+    private subscriptionOptions?;
     constructor(user: User, providerId: string, accountId: string, formBuilder: FormBuilder);
+    private injectStyles;
     /**
      * Show Stripe form
      * @param productId - stripe price_id
      * @param paywallId - paywall user purchased from
      * @param placementId - placement id user purchased from
      * @param options - Form options. Success URL / Failure URL
+     * @param subscriptionOptions - Optional subscription options
      */
-    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions): Promise<void>;
+    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions, subscriptionOptions?: SubscriptionOptions): Promise<void>;
     private setButtonState;
     /**
      * Create subscription
      * @param productId - stripe price_id
      * @param paywallId - paywall user purchased from
      * @param placementId - placement id user purchased from
+     * @param customerId - customer id
+     * @param paymentMethodId - payment method id
      * @private
      */
     private createSubscription;
+    private createCustomer;
     /**
      * Initialize Stripe elements
      * @private
@@ -43,6 +53,7 @@ declare class StripeForm implements PaymentForm {
      * @private
      */
     private setupForm;
+    private ensureHttpsUrl;
 }
 export default StripeForm;
 //# sourceMappingURL=stripeForm.d.ts.map

@@ -10,7 +10,9 @@ import {
     Subscription,
     Message,
     SuccessMessage,
-    AttributionData
+    AttributionData,
+    CustomerSetup,
+    CustomerParams
 } from "../../types";
 import router from "./router";
 
@@ -68,6 +70,16 @@ const createSubscription = async (providerId: string, data: SubscriptionParams):
     return response.data.results as Subscription;
 }
 
+const createCustomer = async (providerId: string, data: CustomerParams): Promise<CustomerSetup> => {
+    const response = await sendRequest('POST', router.customerUrl(providerId), data)
+
+    if (response.errors && response.errors.length > 0) {
+        logError('Customer creation failed:', response.errors);
+    }
+
+    return response.data.results as CustomerSetup;
+}
+
 /**
  * Send request to API. General function
  * @param method - http method
@@ -119,4 +131,4 @@ const sendRequest = async (method: string, url: string, data?: ApphudHash | null
     return await attempt(0);
 }
 
-export default {createUser, createEvent, baseHeaders, createSubscription, setAttribution}
+export default {createUser, createEvent, baseHeaders, createSubscription, setAttribution, createCustomer}

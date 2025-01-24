@@ -1,5 +1,5 @@
 import {config} from "../config/config";
-import {EVENTS, PAYMENT_INTENT, USERS, SUBSCRIBE, ATTRIBUTION} from "./endpoints";
+import {EVENTS, PAYMENT_INTENT, USERS, SUBSCRIBE, ATTRIBUTION, PAYMENT_PROVIDER_CUSTOMERS} from "./endpoints";
 
 interface Router {
     userUrl: () => string
@@ -7,6 +7,7 @@ interface Router {
     attributionUrl: (deviceId: string) => string
     paymentIntentUrl: (providerId: string) => string
     subscribeUrl: (providerId: string) => string
+    customerUrl: (providerId: string) => string
 }
 
 const router: Router = {
@@ -24,6 +25,9 @@ const router: Router = {
     },
     subscribeUrl(providerId: string): string {
         return config.baseURL + SUBSCRIBE.replace(':id', providerId)
+    },
+    customerUrl(providerId: string): string {
+        return config.baseURL + PAYMENT_PROVIDER_CUSTOMERS.replace(':id', providerId)
     }
 };
 
