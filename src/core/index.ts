@@ -323,7 +323,7 @@ export default class ApphudSDK implements Apphud {
         }
 
         const paywall = placement.paywalls[0];
-        const selectedBundle = paywall.items[bundleIndex];
+        const selectedBundle = paywall.items_v2[bundleIndex];
         if (!selectedBundle) {
             logError("No product bundle found at index:", bundleIndex);
             return;
@@ -364,7 +364,7 @@ export default class ApphudSDK implements Apphud {
         this._currentPlacement = this.findPlacementByID(placementID);
         if (this._currentPlacement && this._currentPlacement.paywalls.length > 0) {
             this._currentPaywall = this._currentPlacement.paywalls[0];
-            const bundle = this._currentPaywall.items[bundleIndex];
+            const bundle = this._currentPaywall.items_v2[bundleIndex];
             
             if (bundle) {
                 this._currentBundle = bundle;
@@ -532,7 +532,7 @@ export default class ApphudSDK implements Apphud {
                         const savedIndices = this.getSavedPlacementBundleIndex()
                         
                         if (currentPaywall && savedIndices.bundleIndex) {
-                            const bundle = currentPaywall.items[savedIndices.bundleIndex]
+                            const bundle = currentPaywall.items_v2[savedIndices.bundleIndex]
                             if (bundle) {
                                 const compatibleProduct = this.findCompatibleProduct(bundle, preferred)
                                 if (compatibleProduct) {
@@ -834,7 +834,7 @@ export default class ApphudSDK implements Apphud {
 
         log("Placement", placementID, bundleIndex)
         const paywall = placement.paywalls[0]!
-        const bundle = paywall!.items[bundleIndex]
+        const bundle = paywall!.items_v2[bundleIndex]
         
         if (bundle !== null && bundle !== undefined && bundle.properties !== undefined) {
             return u.getValueByPath(bundle.properties, path)
@@ -869,7 +869,7 @@ export default class ApphudSDK implements Apphud {
 
         if (paywall !== null && paywall !== undefined) {
             // Get first bundle
-            return paywall.items[0] || null;
+            return paywall.items_v2[0] || null;
         }
 
         return null
@@ -885,7 +885,7 @@ export default class ApphudSDK implements Apphud {
 
         if (paywall !== null && paywall !== undefined) {
             // Get first bundle
-            const firstBundle = paywall.items[0];
+            const firstBundle = paywall.items_v2[0];
             if (firstBundle && firstBundle.products.length > 0) {
                 // If we have a current payment provider, find compatible product
                 if (this.currentPaymentProvider) {

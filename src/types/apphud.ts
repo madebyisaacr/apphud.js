@@ -86,7 +86,7 @@ export interface Paywall {
     experiment_id: string | null
     identifier: string
     json: string
-    items: ProductBundle[]
+    items_v2: ProductBundle[]
 }
 
 export interface Apphud {
