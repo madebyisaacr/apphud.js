@@ -1,7 +1,6 @@
 import {documentReady, log, logError} from "../../utils"
 import api from '../api'
 import {
-    PaymentFormContainer,
     DeepLinkURL,
     SelectedProductDuration,
 } from "../config/constants"
@@ -23,7 +22,7 @@ import {config} from "../config/config";
 import FormBuilder from "./formBuilder";
 
 class StripeForm implements PaymentForm {
-    private elementID = "payment-element"
+    private elementID = "stripe-payment-element"
     private stripe: Stripe | null = null
     private elements: StripeElements | undefined = undefined
     private paymentElement: StripeCardNumberElement | null = null
@@ -127,12 +126,12 @@ class StripeForm implements PaymentForm {
         this.currentPaywallId = paywallId;
         this.currentPlacementId = placementId;
         this.subscriptionOptions = subscriptionOptions;
-        this.formBuilder.emit("payment_form_initialized", { paymentProvider: "stripe", event: { selector: PaymentFormContainer } })
+        this.formBuilder.emit("payment_form_initialized", { paymentProvider: "stripe", event: { selector: "#apphud-stripe-payment-form" } })
 
-        const submitButton = document.querySelector('#submit')
+        const submitButton = document.querySelector('#stripe-submit')
 
         if (!submitButton) {
-            logError("Submit button is required. Add <button id=\"submit\">Pay</button>")
+            logError("Submit button is required. Add <button id=\"stripe-submit\">Pay</button>")
             return
         }
 
@@ -159,7 +158,7 @@ class StripeForm implements PaymentForm {
             logError("Failed to initialize Stripe form:", error)
             this.setButtonState("ready")
             
-            const errorElement = document.querySelector('#error-message')
+            const errorElement = document.querySelector('#stripe-error-message')
             if (errorElement) {
                 errorElement.textContent = "Failed to initialize payment form. Please try again."
             }
@@ -282,8 +281,7 @@ class StripeForm implements PaymentForm {
                 fontSize: '16px',
                 '::placeholder': {
                     color: '#aab7c4'
-                },
-                padding: '10px 12px',
+                }
             },
             invalid: {
                 color: '#dc3545',
@@ -326,28 +324,28 @@ class StripeForm implements PaymentForm {
         if (paymentElementContainer) {
             paymentElementContainer.innerHTML = `
                 <div class="stripe-element-container">
-                    <div id="card-number-element"></div>
+                    <div id="stripe-card-number-element" style="padding: 10px 12px;"></div>
                     <div class="stripe-row">
                         <div class="stripe-column">
-                            <div id="card-expiry-element"></div>
+                            <div id="stripe-card-expiry-element" style="padding: 10px 12px;"></div>
                         </div>
                         <div class="stripe-column">
-                            <div id="card-cvc-element"></div>
+                            <div id="stripe-card-cvc-element" style="padding: 10px 12px;"></div>
                         </div>
                     </div>
                 </div>
             `;
 
-            cardNumberElement.mount('#card-number-element');
-            cardExpiryElement.mount('#card-expiry-element');
-            cardCvcElement.mount('#card-cvc-element');
+            cardNumberElement.mount('#stripe-card-number-element');
+            cardExpiryElement.mount('#stripe-card-expiry-element');
+            cardCvcElement.mount('#stripe-card-cvc-element');
         }
 
         this.paymentElement = cardNumberElement;
 
         // Event listeners
         cardNumberElement.on('change', (event) => {
-            const displayError = document.querySelector("#card-errors")
+            const displayError = document.querySelector("#stripe-error-message")
             if (displayError && event.error) {
                 displayError.textContent = event.error.message
             }
@@ -365,7 +363,7 @@ class StripeForm implements PaymentForm {
      * @private
      */
     private async setupForm(options?: PaymentProviderFormOptions): Promise<void> {
-        const form = document.querySelector(PaymentFormContainer)
+        const form = document.querySelector("#apphud-stripe-payment-form")
 
         if (!form) {
             logError("Payment form: no form provided")
@@ -424,7 +422,7 @@ class StripeForm implements PaymentForm {
                 logError("Failed to confirm card setup:", error)
                 this.setButtonState("ready")
                 
-                const errorElement = document.querySelector('#error-message')
+                const errorElement = document.querySelector('#stripe-error-message')
                 if (errorElement) {
                     errorElement.textContent = "Failed to initialize payment form. Please try again."
                 }
