@@ -234,19 +234,19 @@ export default class ApphudSDK implements Apphud {
 
     /**
      * Show payment form with saved product to cookies
-     * @param options - form options
+     * @param options - form options (optional)
      * @param product - product id - optional
      */
-    public paymentForm(options: PaymentProviderFormOptions, product?: string): void {
+    public paymentForm(options?: PaymentProviderFormOptions, product?: string): void {
         this.checkInitialization();
 
         this.ready(async (): Promise<void> => {
+            const formOptions = options || {};
 
-            if (options.paymentProvider) {
-                log("Setting preferred payment provider:", options.paymentProvider)
-                this.setPaymentProvider(options.paymentProvider)
+            if (formOptions.paymentProvider) {
+                log("Setting preferred payment provider:", formOptions.paymentProvider)
+                this.setPaymentProvider(formOptions.paymentProvider)
             } else {
-                log("Payment form options:", options)
                 log("No preferred payment provider specified, using default")
             }
 
@@ -302,7 +302,7 @@ export default class ApphudSDK implements Apphud {
             })
 
             log("Show payment form for product:", productId)
-            await builder.show(productId, this.currentPaywall()!.id, this.currentPlacement()!.id, options, this._currentBundle)
+            await builder.show(productId, this.currentPaywall()!.id, this.currentPlacement()!.id, formOptions, this._currentBundle)
         })
     }
 

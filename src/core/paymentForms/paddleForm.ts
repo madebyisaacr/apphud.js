@@ -49,7 +49,7 @@ class PaddleForm implements PaymentForm {
         productId: string, 
         paywallId: string | undefined, 
         placementId: string | undefined, 
-        options: PaymentProviderFormOptions,
+        options: PaymentProviderFormOptions = {},
         subscriptionOptions?: SubscriptionOptions
     ): Promise<void> {
         this.currentOptions = options

@@ -65,10 +65,10 @@ export default class ApphudSDK implements Apphud {
     private initializeApp;
     /**
      * Show payment form with saved product to cookies
-     * @param options - form options
+     * @param options - form options (optional)
      * @param product - product id - optional
      */
-    paymentForm(options: PaymentProviderFormOptions, product?: string): void;
+    paymentForm(options?: PaymentProviderFormOptions, product?: string): void;
     /**
      * Save selected placement and bundle
      * @param placementID - identifier of placement
