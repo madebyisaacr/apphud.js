@@ -1,4 +1,4 @@
-import { Apphud, AttributionData, Config, ApphudHash, LifecycleEventCallback, LifecycleEventName, PaymentProvider, PaymentProviderFormOptions, Paywall, Placement, Product, User, ProductBundle } from '../types';
+import { Apphud, AttributionData, Config, ApphudHash, LifecycleEventCallback, LifecycleEventName, PaymentProvider, PaymentProviderFormOptions, Paywall, Placement, Product, User, PaymentProviderKind, ProductBundle } from '../types';
 /**
  * The main interface for the Apphud SDK. This should be initialized
  * immediately when your app starts. Ensure that only a single instance
@@ -8,8 +8,8 @@ import { Apphud, AttributionData, Config, ApphudHash, LifecycleEventCallback, Li
 export default class ApphudSDK implements Apphud {
     placements: Placement[];
     user: User | undefined;
-    currentPaymentProvider: PaymentProvider | undefined;
-    private _currentProduct;
+    currentPaymentProviders: Map<PaymentProviderKind, PaymentProvider>;
+    private _currentProducts;
     private _currentPlacement;
     private _currentPaywall;
     private _currentBundle;
@@ -82,6 +82,14 @@ export default class ApphudSDK implements Apphud {
      * @private
      */
     private setCurrentItems;
+    /**
+     * Updates the current products and payment providers maps based on the given bundle
+     * @param bundle - The product bundle to process
+     * @param paymentProviders - Available payment providers
+     * @returns boolean - Whether any compatible providers were found
+     * @private
+     */
+    private updateProductsAndProviders;
     /**
      * Set attribution data to user
      * @param data - attribution data dictionary
@@ -177,6 +185,19 @@ export default class ApphudSDK implements Apphud {
     private findPlacementByID;
     currentBundle(): ProductBundle | null;
     currentProduct(): Product | null;
+    /**
+     * Get current product for a specific payment provider
+     * @param provider - payment provider kind (e.g., "stripe" or "paddle")
+     */
+    currentProductForProvider(provider: PaymentProviderKind): Product | null;
+    /**
+     * Get all current products mapped by their payment provider
+     */
+    currentProducts(): Map<PaymentProviderKind, Product>;
+    /**
+     * Get available payment provider kinds for current bundle
+     */
+    availableProviders(): PaymentProviderKind[];
     currentPlacement(): Placement | null;
     currentPaywall(): Paywall | null;
     /**
@@ -185,8 +206,5 @@ export default class ApphudSDK implements Apphud {
      * @private
      */
     private ready;
-    private isProductCompatibleWithProvider;
-    private findCompatibleProduct;
-    private getCompatibleProviders;
 }
 //# sourceMappingURL=index.d.ts.map
