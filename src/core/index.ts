@@ -251,6 +251,11 @@ export default class ApphudSDK implements Apphud {
                 targetProvider = this.currentPaymentProviders.get(formOptions.paymentProvider);
                 if (!targetProvider) {
                     logError(`Requested payment provider ${formOptions.paymentProvider} not available`);
+                    // Emit provider not found event
+                    this.emit(`${formOptions.paymentProvider}_not_found` as LifecycleEventName, {
+                        requestedProvider: formOptions.paymentProvider,
+                        availableProviders: Array.from(this.currentPaymentProviders.keys())
+                    });
                     return;
                 }
             } else {
