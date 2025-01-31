@@ -4,6 +4,8 @@ declare class PaddleForm implements PaymentForm {
     private user;
     private provider;
     private formBuilder;
+    private readonly elementIDs;
+    private formType;
     private paddle;
     private submit;
     private submitReadyText;
