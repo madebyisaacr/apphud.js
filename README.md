@@ -148,15 +148,13 @@ HTML
 JS
 ```javascript
 apphud.paymentForm({
-    paymentProvider: "stripe", // Required: "stripe" or "paddle"
+    paymentProvider: "stripe", // Optional: "stripe" or "paddle"
     successUrl: "https://your-success-url.com", // Optional
 });
 ```
 
-**Required parameters:**
-- `paymentProvider`: Payment provider to use ('stripe' or 'paddle')
-
 **Optional parameters:**
+- `paymentProvider`: Payment provider to use ('stripe' or 'paddle').
 - `successUrl`: Redirect URL after successful payment.
 - `failureUrl`: Redirect URL after payment failure.
 
@@ -204,7 +202,7 @@ In this example:
 
 ### Example Usage
 
-Here’s an example of how you might use `data-aph-var` in your HTML:
+Here's an example of how you might use `data-aph-var` in your HTML:
 
 ```html
 <div>
@@ -230,7 +228,7 @@ The Apphud SDK provides the method `apphud.operateVariables()` to automatically 
 
 ### Example JavaScript
 
-Here’s an example of updating variables dynamically when the product is changed:
+Here's an example of updating variables dynamically when the product is changed:
 
 ```javascript
 // Update variables after selecting a product
@@ -268,7 +266,7 @@ The following lifecycle events can be listened to:
 
 ### Example Usage
 
-Here’s an example of how to listen for events and handle them using `apphud.on`:
+Here's an example of how to listen for events and handle them using `apphud.on`:
 
 ```javascript
 // Listen for when the SDK is initialized
@@ -305,4 +303,4 @@ Enable debugging by setting `debug: true` during initialization. Logs will appea
 
 ---
 
-This guide provides an overview of how to use the ApphudSDK for common tasks. For advanced features and configurations, refer to the SDK’s full API documentation.
+This guide provides an overview of how to use the ApphudSDK for common tasks. For advanced features and configurations, refer to the SDK's full API documentation.
