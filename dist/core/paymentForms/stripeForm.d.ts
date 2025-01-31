@@ -5,7 +5,8 @@ declare class StripeForm implements PaymentForm {
     private providerId;
     private accountId;
     private formBuilder;
-    private elementID;
+    private readonly elementIDs;
+    private formType;
     private stripe;
     private elements;
     private paymentElement;
@@ -28,7 +29,7 @@ declare class StripeForm implements PaymentForm {
      * @param options - Form options. Success URL / Failure URL
      * @param subscriptionOptions - Optional subscription options
      */
-    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions, subscriptionOptions?: SubscriptionOptions): Promise<void>;
+    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options?: PaymentProviderFormOptions, subscriptionOptions?: SubscriptionOptions): Promise<void>;
     private setButtonState;
     /**
      * Create subscription

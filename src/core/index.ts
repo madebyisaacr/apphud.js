@@ -46,8 +46,8 @@ import FormBuilder from "./paymentForms/formBuilder";
 export default class ApphudSDK implements Apphud {
     public placements: Placement[] = []
     public user: User | undefined = undefined
-    public currentPaymentProvider: PaymentProvider | undefined = undefined
-    private _currentProduct: Product | undefined | null = undefined
+    public currentPaymentProviders: Map<PaymentProviderKind, PaymentProvider> = new Map()
+    private _currentProducts: Map<PaymentProviderKind, Product> = new Map()
     private _currentPlacement: Placement | undefined = undefined
     private _currentPaywall: Paywall | undefined = undefined
     private _currentBundle: ProductBundle | undefined = undefined
@@ -234,63 +234,81 @@ export default class ApphudSDK implements Apphud {
 
     /**
      * Show payment form with saved product to cookies
-     * @param options - form options
+     * @param options - form options (optional)
      * @param product - product id - optional
      */
-    public paymentForm(options: PaymentProviderFormOptions, product?: string): void {
+    public paymentForm(options?: PaymentProviderFormOptions, product?: string): void {
         this.checkInitialization();
 
         this.ready(async (): Promise<void> => {
+            const formOptions = options || {};
 
-            if (options.paymentProvider) {
-                log("Setting preferred payment provider:", options.paymentProvider)
-                this.setPaymentProvider(options.paymentProvider)
+            // Get the appropriate payment provider
+            let targetProvider: PaymentProvider | undefined;
+            if (formOptions.paymentProvider) {
+                // If specific provider requested, use it
+                log("Looking for specified payment provider:", formOptions.paymentProvider);
+                targetProvider = this.currentPaymentProviders.get(formOptions.paymentProvider);
+                if (!targetProvider) {
+                    logError(`Requested payment provider ${formOptions.paymentProvider} not available`);
+                    // Emit provider not found event
+                    this.emit(`${formOptions.paymentProvider}_not_found` as LifecycleEventName, {
+                        requestedProvider: formOptions.paymentProvider,
+                        availableProviders: Array.from(this.currentPaymentProviders.keys())
+                    });
+                    return;
+                }
             } else {
-                log("Payment form options:", options)
-                log("No preferred payment provider specified, using default")
+                // If no provider specified, use first available
+                targetProvider = Array.from(this.currentPaymentProviders.values())[0];
+                log("Using first available payment provider:", targetProvider?.kind);
             }
 
-            if (!this.currentProduct()) {
-                logError("Payment form: product is required")
-                return
+            if (!targetProvider) {
+                logError("No payment provider available");
+                return;
+            }
+
+            // Get the product for this provider
+            const targetProduct = this.currentProductForProvider(targetProvider.kind);
+
+            if (!targetProduct) {
+                logError("Payment form: product is required");
+                return;
             }
 
             if (!this.currentPaywall()) {
-                logError("Payment form: paywall is required")
-                return
+                logError("Payment form: paywall is required");
+                return;
             }
 
             if (!this.currentPlacement()) {
-                logError("Payment form: placement is required")
-                return
+                logError("Payment form: placement is required");
+                return;
             }
 
-            log("Initializing payment form with payment provider:", this.currentPaymentProvider)
+            log("Initializing payment form with payment provider:", targetProvider);
 
-            const productId = product || this.currentProduct()!.base_plan_id
+            const productId = product || targetProduct.base_plan_id;
 
             if (!productId) {
-                logError("Unable to initializeApp the payment form because the product is absent.")
-                return
+                logError("Unable to initialize the payment form because the product is absent.");
+                return;
             }
 
-            if (!this.currentPaymentProvider) {
-                logError("Unable to initializeApp the payment form because the payment provider is absent.");
-                return
-            }
             if (!this.user) {
                 logError("Payment form: no user");
-                return
+                return;
             }
 
-            const builder = new FormBuilder(this.currentPaymentProvider, this.user)
+            const builder = new FormBuilder(targetProvider, this.user);
 
-            const formEvents: LifecycleEventName[] = ["payment_form_initialized", "payment_form_ready", "payment_failure", "payment_success"]
+            const formEvents: LifecycleEventName[] = ["payment_form_initialized", "payment_form_ready", "payment_failure", "payment_success"];
 
             formEvents.forEach((formEvent) => {
                 builder.on(formEvent, (e) => {
-                    this.emit(formEvent, e)
-                })
+                    this.emit(formEvent, e);
+                });
 
                 if (formEvent === "payment_form_ready") {
                     if (this._currentPaywall !== undefined && this._currentPlacement !== undefined) {
@@ -299,11 +317,11 @@ export default class ApphudSDK implements Apphud {
                         logError('Unable to track the "paywall_checkout_initiated" event: either paywall_id or placement_id is empty.')
                     }
                 }
-            })
+            });
 
-            log("Show payment form for product:", productId)
-            await builder.show(productId, this.currentPaywall()!.id, this.currentPlacement()!.id, options, this._currentBundle)
-        })
+            log("Show payment form for product:", productId);
+            await builder.show(productId, this.currentPaywall()!.id, this.currentPlacement()!.id, formOptions, this._currentBundle);
+        });
     }
 
     /**
@@ -329,24 +347,11 @@ export default class ApphudSDK implements Apphud {
             return;
         }
 
-        // If we have a current payment provider, check compatibility
-        if (this.currentPaymentProvider) {
-            const compatibleProduct = this.findCompatibleProduct(selectedBundle, this.currentPaymentProvider);
-            if (!compatibleProduct) {
-                // Current provider is not compatible with selected product
-                const compatibleProviders = this.getCompatibleProviders(selectedBundle);
-                if (compatibleProviders.length > 0) {
-                    // Auto-switch to first compatible provider
-                    this.currentPaymentProvider = compatibleProviders[0];
-                    this.emit("payment_provider_changed", {
-                        provider: this.currentPaymentProvider,
-                        reason: "product_compatibility"
-                    });
-                } else {
-                    logError("No compatible payment providers found for selected product bundle");
-                    return;
-                }
-            }
+        const success = this.updateProductsAndProviders(selectedBundle, this.user?.payment_providers || []);
+        
+        if (!success) {
+            logError("Failed to set up payment providers for selected bundle");
+            return;
         }
 
         this.setCurrentItems(placementID, bundleIndex);
@@ -369,14 +374,6 @@ export default class ApphudSDK implements Apphud {
             if (bundle) {
                 this._currentBundle = bundle;
                 
-                // Find compatible product from bundle based on current payment provider
-                if (this.currentPaymentProvider) {
-                    this._currentProduct = this.findCompatibleProduct(bundle, this.currentPaymentProvider);
-                } else {
-                    // If no payment provider is set, use the first product in the bundle
-                    this._currentProduct = bundle.products[0];
-                }
-
                 // Check for required price macros
                 if (bundle.properties) {
                     const macrosToCheck = [
@@ -398,13 +395,58 @@ export default class ApphudSDK implements Apphud {
                         logError(`Placement with identifier "${placementID}" was requested and found, but price macros are missing. Learn how to set up macros here: https://docs.apphud.com/docs/configure-web-placements#setting-up-product-macros`);
                     }
                 }
-
-                log("Current placement", this._currentPlacement);
-                log("Current paywall", this._currentPaywall);
-                log("Current bundle", this._currentBundle);
-                log("Current product", this._currentProduct);
+                
+                if (bundle.products.length > 0) {
+                    const success = this.updateProductsAndProviders(bundle, this.user?.payment_providers || []);
+                    
+                    if (success) {
+                        log("Current placement", this._currentPlacement);
+                        log("Current paywall", this._currentPaywall);
+                        log("Current bundle", this._currentBundle);
+                        log("Current products", this._currentProducts);
+                        log("Current payment providers", this.currentPaymentProviders);
+                    }
+                } else {
+                    logError("Bundle contains no products");
+                }
             }
         }
+    }
+
+    /**
+     * Updates the current products and payment providers maps based on the given bundle
+     * @param bundle - The product bundle to process
+     * @param paymentProviders - Available payment providers
+     * @returns boolean - Whether any compatible providers were found
+     * @private
+     */
+    private updateProductsAndProviders(bundle: ProductBundle, paymentProviders: PaymentProvider[]): boolean {
+        // Clear existing maps
+        this._currentProducts.clear();
+        this.currentPaymentProviders.clear();
+
+        // Process all products in the bundle
+        bundle.products.forEach(product => {
+            const requiredStore = product.store;
+            
+            const compatibleProvider = paymentProviders.find(provider => 
+                provider.kind === requiredStore
+            );
+            
+            if (compatibleProvider) {
+                this._currentProducts.set(requiredStore, product);
+                this.currentPaymentProviders.set(requiredStore, compatibleProvider);
+            } else {
+                logError(`No compatible payment provider found for store type: ${requiredStore}`);
+            }
+        });
+
+        if (this.currentPaymentProviders.size === 0) {
+            logError("No compatible payment providers found for any products in the bundle");
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -512,59 +554,25 @@ export default class ApphudSDK implements Apphud {
      */
     private setPaymentProvider(preferredProvider?: PaymentProviderKind): void {
         this.ready((): void => {
-            const paymentProviders = this.user?.payment_providers || []
+            const paymentProviders = this.user?.payment_providers || [];
+            if (paymentProviders.length === 0) return;
 
-            if (paymentProviders.length === 0) {
-                return
-            }
-
-            // Try to use preferred provider if specified
-            if (preferredProvider) {
-                const preferred = paymentProviders.find(provider => provider.kind === preferredProvider)
-                if (preferred) {
-                    // Check compatibility with current product if one is selected
-                    const currentProduct = this.currentProduct()
-                    if (currentProduct && currentProduct.store !== preferred.kind) {
-                        logError(`Selected product is not compatible with payment provider ${preferred.kind}`)
-                        
-                        // Try to find a compatible product in the current bundle
-                        const currentPaywall = this.currentPaywall()
-                        const savedIndices = this.getSavedPlacementBundleIndex()
-                        
-                        if (currentPaywall && savedIndices.bundleIndex) {
-                            const bundle = currentPaywall.items_v2[savedIndices.bundleIndex]
-                            if (bundle) {
-                                const compatibleProduct = this.findCompatibleProduct(bundle, preferred)
-                                if (compatibleProduct) {
-                                    this._currentProduct = compatibleProduct
-                                    this.currentPaymentProvider = preferred
-                                    this.emit("payment_provider_changed", {
-                                        provider: preferred,
-                                        reason: "product_compatibility"
-                                    })
-                                    log("Set preferred payment provider:", this.currentPaymentProvider)
-                                    return
-                                }
-                            }
-                        }
-                        return
+            const currentBundle = this._currentBundle;
+            
+            if (currentBundle) {
+                const success = this.updateProductsAndProviders(currentBundle, paymentProviders);
+                
+                if (success && preferredProvider) {
+                    const preferredProviderInstance = this.currentPaymentProviders.get(preferredProvider);
+                    if (preferredProviderInstance) {
+                        this.emit("payment_provider_changed", {
+                            provider: preferredProviderInstance,
+                            reason: "user_selection"
+                        });
                     }
-                    
-                    this.currentPaymentProvider = preferred
-                    this.emit("payment_provider_changed", {
-                        provider: preferred,
-                        reason: "user_selection"
-                    })
-                    log("Set preferred payment provider:", this.currentPaymentProvider)
-                    return
                 }
-                logError(`Preferred payment provider ${preferredProvider} not available`)
             }
-
-            // Fallback: use first available provider if no preference or preferred not available
-            this.currentPaymentProvider = paymentProviders[0]
-            log("Set default payment provider:", this.currentPaymentProvider)
-        })
+        });
     }
 
     /**
@@ -878,25 +886,34 @@ export default class ApphudSDK implements Apphud {
     public currentProduct(): Product | null {
         this.checkInitialization();
         
-        if (this._currentProduct)
-            return this._currentProduct
+        // Return the first available product
+        const firstProduct = Array.from(this._currentProducts.values())[0];
+        return firstProduct || null;
+    }
 
-        const paywall = this.currentPaywall()
+    /**
+     * Get current product for a specific payment provider
+     * @param provider - payment provider kind (e.g., "stripe" or "paddle")
+     */
+    public currentProductForProvider(provider: PaymentProviderKind): Product | null {
+        this.checkInitialization();
+        return this._currentProducts.get(provider) || null;
+    }
 
-        if (paywall !== null && paywall !== undefined) {
-            // Get first bundle
-            const firstBundle = paywall.items_v2[0];
-            if (firstBundle && firstBundle.products.length > 0) {
-                // If we have a current payment provider, find compatible product
-                if (this.currentPaymentProvider) {
-                    return this.findCompatibleProduct(firstBundle, this.currentPaymentProvider);
-                }
-                // Otherwise return first product in bundle
-                return firstBundle.products[0];
-            }
-        }
+    /**
+     * Get all current products mapped by their payment provider
+     */
+    public currentProducts(): Map<PaymentProviderKind, Product> {
+        this.checkInitialization();
+        return new Map(this._currentProducts);
+    }
 
-        return null
+    /**
+     * Get available payment provider kinds for current bundle
+     */
+    public availableProviders(): PaymentProviderKind[] {
+        this.checkInitialization();
+        return Array.from(this.currentPaymentProviders.keys());
     }
 
     public currentPlacement(): Placement | null {
@@ -941,25 +958,5 @@ export default class ApphudSDK implements Apphud {
             log('not ready push to queue', callback);
             this.queue.push(callback);
         }
-    }
-
-    private isProductCompatibleWithProvider(product: Product, provider: PaymentProvider): boolean {
-        return product.store === provider.kind && product.payment_provider_id === provider.id;
-    }
-
-    private findCompatibleProduct(bundle: ProductBundle, provider: PaymentProvider): Product | null {
-        return bundle.products.find(product => this.isProductCompatibleWithProvider(product, provider)) || null;
-    }
-
-    private getCompatibleProviders(bundle: ProductBundle): PaymentProvider[] {
-        const compatibleProviders: PaymentProvider[] = [];
-        
-        if (!this.user?.payment_providers) {
-            return compatibleProviders;
-        }
-
-        return this.user.payment_providers.filter(provider => 
-            bundle.products.some(product => this.isProductCompatibleWithProvider(product, provider))
-        );
     }
 }

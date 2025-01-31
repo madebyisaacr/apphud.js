@@ -4,6 +4,8 @@ declare class PaddleForm implements PaymentForm {
     private user;
     private provider;
     private formBuilder;
+    private readonly elementIDs;
+    private formType;
     private paddle;
     private submit;
     private submitReadyText;
@@ -20,7 +22,7 @@ declare class PaddleForm implements PaymentForm {
      * @param options - Form options including success URL and appearance customization
      * @param subscriptionOptions - Subscription options for the subscription
      */
-    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions, subscriptionOptions?: SubscriptionOptions): Promise<void>;
+    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options?: PaymentProviderFormOptions, subscriptionOptions?: SubscriptionOptions): Promise<void>;
     private setupFormElements;
     /**
      * Setup checkout configuration and form submission handler

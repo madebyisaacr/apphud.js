@@ -146,10 +146,10 @@ export interface Apphud {
      */
     placements: Placement[];
     /**
-     * Retrieves the current payment provider.
-     * @type {PaymentProvider | undefined}
+     * Map of current payment providers by their kind.
+     * @type {Map<PaymentProviderKind, PaymentProvider>}
      */
-    currentPaymentProvider: PaymentProvider | undefined;
+    currentPaymentProviders: Map<PaymentProviderKind, PaymentProvider>;
     /**
      * Selects a product for a given placement index.
      * @param {string} placementIndex - The index of the placement.

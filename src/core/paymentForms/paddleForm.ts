@@ -2,13 +2,29 @@ import {log, logError} from "../../utils";
 import {initializePaddle, Paddle, CheckoutOpenOptions, PaddleEventData} from '@paddle/paddle-js'
 import {PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, Subscription, SubscriptionOptions} from "../../types";
 import FormBuilder from "./formBuilder";
-import {PaymentFormContainer} from "../config/constants";
 import {config} from "../config/config";
 import api from "../api";
 import {setCookie} from "../../cookies";
 import {DeepLinkURL, SelectedProductDuration} from "../config/constants";
 
 class PaddleForm implements PaymentForm {
+    // Add support for both new and old element IDs
+    private readonly elementIDs = {
+        new: {
+            form: "apphud-paddle-payment-form",
+            submit: "paddle-submit",
+            error: "paddle-error-message"
+        },
+        old: {
+            form: "apphud-payment-form",
+            submit: "submit",
+            error: "error-message"
+        }
+    }
+    
+    // Add formType detection
+    private formType: 'new' | 'old' = 'new';
+    
     private paddle: Paddle | null | undefined = null
     private submit: HTMLButtonElement | null = null
     private submitReadyText = "Subscribe"
@@ -49,12 +65,21 @@ class PaddleForm implements PaymentForm {
         productId: string, 
         paywallId: string | undefined, 
         placementId: string | undefined, 
-        options: PaymentProviderFormOptions,
+        options: PaymentProviderFormOptions = {},
         subscriptionOptions?: SubscriptionOptions
     ): Promise<void> {
         this.currentOptions = options
+        
+        // Detect which form type is present
+        this.formType = document.getElementById(this.elementIDs.new.form) ? 'new' : 'old';
+        
         log("Initializing Paddle payment form for product:", productId)
-        this.formBuilder.emit("payment_form_initialized", { paymentProvider: "paddle", event: { selector: PaymentFormContainer } })
+        this.formBuilder.emit("payment_form_initialized", { 
+            paymentProvider: "paddle", 
+            event: { 
+                selector: `#${this.elementIDs[this.formType].form}` 
+            } 
+        })
 
         try {
             await this.createSubscription(productId, paywallId, placementId, subscriptionOptions)
@@ -81,16 +106,15 @@ class PaddleForm implements PaymentForm {
     }
 
     private async setupFormElements(): Promise<void> {
-        // Verify form container exists
-        const form = document.querySelector(PaymentFormContainer)
+        const form = document.querySelector(`#${this.elementIDs[this.formType].form}`)
         if (!form) {
             throw new Error("Payment form container not found")
         }
 
-        // Setup submit button
-        const submitButton = document.querySelector('#submit')
+        // Update submit button selector
+        const submitButton = document.querySelector(`#${this.elementIDs[this.formType].submit}`)
         if (!submitButton) {
-            logError("Submit button is required. Add <button id=\"submit\">Pay</button>")
+            logError(`Submit button is required. Add <button id="${this.elementIDs[this.formType].submit}">Pay</button>`)
             return
         }
 
@@ -101,10 +125,10 @@ class PaddleForm implements PaymentForm {
             this.submitReadyText = this.submit.innerText
         }
 
-        // Add error message container if it doesn't exist
-        if (!document.querySelector('#error-message')) {
+        // Update error message container ID
+        if (!document.querySelector(`#${this.elementIDs[this.formType].error}`)) {
             const errorDiv = document.createElement('div')
-            errorDiv.id = 'error-message'
+            errorDiv.id = this.elementIDs[this.formType].error
             form.appendChild(errorDiv)
         }
     }
@@ -117,8 +141,13 @@ class PaddleForm implements PaymentForm {
      * @param options - Form options including success URL and appearance customization
      * @private
      */
-    private async setupCheckout(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions): Promise<void> {
-        const form = document.querySelector(PaymentFormContainer)
+    private async setupCheckout(
+        productId: string, 
+        paywallId: string | undefined, 
+        placementId: string | undefined, 
+        options: PaymentProviderFormOptions
+    ): Promise<void> {
+        const form = document.querySelector(`#${this.elementIDs[this.formType].form}`)
 
         if (!form) {
             throw new Error("Payment form: no form provided")
@@ -157,8 +186,7 @@ class PaddleForm implements PaymentForm {
                 logError("Failed to open Paddle checkout:", error)
                 this.setButtonState("ready")
                 
-                // Display error to user
-                const errorElement = document.querySelector('#error-message')
+                const errorElement = document.querySelector(`#${this.elementIDs[this.formType].error}`)
                 if (errorElement) {
                     errorElement.textContent = error instanceof Error ? error.message : "Payment failed"
                 }

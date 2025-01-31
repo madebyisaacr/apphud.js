@@ -1,7 +1,6 @@
 import {documentReady, log, logError} from "../../utils"
 import api from '../api'
 import {
-    PaymentFormContainer,
     DeepLinkURL,
     SelectedProductDuration,
 } from "../config/constants"
@@ -11,22 +10,34 @@ import {
     Stripe,
     StripeElements,
     StripeElementsOptions,
-    StripeCardNumberElement,
-    StripeCardExpiryElementOptions,
-    StripeCardCvcElementOptions,
-    StripeCardNumberElementOptions,
-    StripeElementStyle,
-    StripeElementClasses
+    StripePaymentElement,
+    StripePaymentElementChangeEvent
 } from "@stripe/stripe-js";
 import {setCookie} from "../../cookies";
 import {config} from "../config/config";
 import FormBuilder from "./formBuilder";
 
 class StripeForm implements PaymentForm {
-    private elementID = "payment-element"
+    private readonly elementIDs = {
+        new: {
+            form: "apphud-stripe-payment-form",
+            payment: "stripe-payment-element",
+            submit: "stripe-submit",
+            error: "stripe-error-message"
+        },
+        old: {
+            form: "apphud-payment-form",
+            payment: "payment-element",
+            submit: "submit",
+            error: "error-message"
+        }
+    }
+    
+    private formType: 'new' | 'old' = 'new';
+    
     private stripe: Stripe | null = null
     private elements: StripeElements | undefined = undefined
-    private paymentElement: StripeCardNumberElement | null = null
+    private paymentElement: StripePaymentElement | null = null
     private subscription: Subscription | null = null
     private submit: HTMLButtonElement | null = null
     private submitReadyText = "Subscribe"
@@ -58,47 +69,12 @@ class StripeForm implements PaymentForm {
 
         const styles = `
             .stripe-element-container {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
+                padding: 10px 0;
             }
 
-            .stripe-element {
-                min-height: 40px;
-                background-color: white;
-                border: 1px solid #e6e6e6;
-                border-radius: 6px;
-                padding: 0;
-            }
-
-            .stripe-row {
-                display: flex;
-                gap: 12px;
-            }
-
-            .stripe-column {
-                flex: 1;
-            }
-
-            .stripe-element--focus {
-                border-color: #80bdff;
-                box-shadow: 0 1px 3px 0 #cfd7df;
-            }
-
-            .stripe-element--invalid {
-                border-color: #dc3545;
-            }
-
-            .stripe-element--complete {
-                border-color: #28a745;
-            }
-
-            #card-number-element,
-            #card-expiry-element,
-            #card-cvc-element {
-                padding: 10px 12px;
+            #${this.elementIDs.new.payment},
+            #${this.elementIDs.old.payment} {
                 width: 100%;
-                height: 100%;
             }
         `;
 
@@ -120,19 +96,22 @@ class StripeForm implements PaymentForm {
         productId: string, 
         paywallId: string | undefined, 
         placementId: string | undefined, 
-        options: PaymentProviderFormOptions,
+        options: PaymentProviderFormOptions = {},
         subscriptionOptions?: SubscriptionOptions
     ): Promise<void> {
         this.currentProductId = productId;
         this.currentPaywallId = paywallId;
         this.currentPlacementId = placementId;
         this.subscriptionOptions = subscriptionOptions;
-        this.formBuilder.emit("payment_form_initialized", { paymentProvider: "stripe", event: { selector: PaymentFormContainer } })
+        this.formBuilder.emit("payment_form_initialized", { paymentProvider: "stripe", event: { selector: "#apphud-stripe-payment-form" } })
 
-        const submitButton = document.querySelector('#submit')
+        // Detect which form type is present
+        this.formType = document.getElementById(this.elementIDs.new.form) ? 'new' : 'old';
+        
+        const submitButton = document.querySelector(`#${this.elementIDs[this.formType].submit}`)
 
         if (!submitButton) {
-            logError("Submit button is required. Add <button id=\"submit\">Pay</button>")
+            logError(`Submit button is required. Add <button id="${this.elementIDs[this.formType].submit}">Pay</button>`)
             return
         }
 
@@ -159,7 +138,7 @@ class StripeForm implements PaymentForm {
             logError("Failed to initialize Stripe form:", error)
             this.setButtonState("ready")
             
-            const errorElement = document.querySelector('#error-message')
+            const errorElement = document.querySelector(`#${this.elementIDs[this.formType].error}`)
             if (errorElement) {
                 errorElement.textContent = "Failed to initialize payment form. Please try again."
             }
@@ -232,6 +211,7 @@ class StripeForm implements PaymentForm {
     private async createCustomer(): Promise<CustomerSetup> {
         const customer = await api.createCustomer(this.providerId, {
             user_id: this.user.id,
+            payment_methods: ['card', 'bancontact', 'sepa_debit']
         });
     
         if (!customer) {
@@ -267,95 +247,46 @@ class StripeForm implements PaymentForm {
         // Define elements options
         const elementsOptions: StripeElementsOptions = {
             clientSecret: this.customer.client_secret,
-            loader: "always",
-            appearance: stripeAppearance
+            appearance: stripeAppearance,
+            loader: "always"
         }
 
         this.elements = this.stripe.elements(elementsOptions)
-            
-        // Define default styles for Stripe elements
-        const defaultStyles: StripeElementStyle = {
-            base: {
-                color: '#424770',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontSmoothing: 'antialiased',
-                fontSize: '16px',
-                '::placeholder': {
-                    color: '#aab7c4'
-                },
-                padding: '10px 12px',
-            },
-            invalid: {
-                color: '#dc3545',
-                iconColor: '#dc3545'
-            }
-        };
-
-        // Define classes for Stripe elements
-        const elementClasses: StripeElementClasses = {
-            base: 'stripe-element',
-            focus: 'stripe-element--focus',
-            invalid: 'stripe-element--invalid',
-            complete: 'stripe-element--complete',
-        };
-
-        // Define options for each element with styles and classes
-        const cardNumberOptions: StripeCardNumberElementOptions = {
-            style: defaultStyles,
-            classes: elementClasses,
-            showIcon: true,
-        };
-
-        const cardExpiryOptions: StripeCardExpiryElementOptions = {
-            style: defaultStyles,
-            classes: elementClasses,
-        };
-
-        const cardCvcOptions: StripeCardCvcElementOptions = {
-            style: defaultStyles,
-            classes: elementClasses,
-        };
-
-        // Create and mount elements
-        const cardNumberElement = this.elements.create('cardNumber', cardNumberOptions);
-        const cardExpiryElement = this.elements.create('cardExpiry', cardExpiryOptions);
-        const cardCvcElement = this.elements.create('cardCvc', cardCvcOptions);
-
-        // Mount elements with simpler container structure
-        const paymentElementContainer = document.getElementById(this.elementID);
+        
+        // Create and mount the Payment Element
+        const paymentElement = this.elements.create('payment')
+        
+        const paymentElementContainer = document.getElementById(this.elementIDs[this.formType].payment);
         if (paymentElementContainer) {
-            paymentElementContainer.innerHTML = `
-                <div class="stripe-element-container">
-                    <div id="card-number-element"></div>
-                    <div class="stripe-row">
-                        <div class="stripe-column">
-                            <div id="card-expiry-element"></div>
-                        </div>
-                        <div class="stripe-column">
-                            <div id="card-cvc-element"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            cardNumberElement.mount('#card-number-element');
-            cardExpiryElement.mount('#card-expiry-element');
-            cardCvcElement.mount('#card-cvc-element');
+            paymentElementContainer.innerHTML = '<div class="stripe-element-container"></div>';
+            paymentElement.mount(`#${this.elementIDs[this.formType].payment} .stripe-element-container`);
         }
 
-        this.paymentElement = cardNumberElement;
+        this.paymentElement = paymentElement;
 
-        // Event listeners
-        cardNumberElement.on('change', (event) => {
-            const displayError = document.querySelector("#card-errors")
-            if (displayError && event.error) {
-                displayError.textContent = event.error.message
+        // Event listener for ready state
+        paymentElement.on('ready', (e) => {
+            this.setButtonState("ready")
+            this.formBuilder.emit("payment_form_ready", { paymentProvider: "stripe", event: e })
+        });
+
+        // Event listener for change events
+        paymentElement.on('change', (event: StripePaymentElementChangeEvent) => {
+            const displayError = document.querySelector(`#${this.elementIDs[this.formType].error}`)
+            if (displayError) {
+                // Clear any previous error messages when the form is valid
+                if (event.complete) {
+                    displayError.textContent = "";
+                }
             }
         });
 
-        cardNumberElement.on('ready', (e) => {
-            this.setButtonState("ready")
-            this.formBuilder.emit("payment_form_ready", { paymentProvider: "stripe", event: e })
+        // Add a separate error event listener for loader errors
+        paymentElement.on('loaderror', (event) => {
+            const displayError = document.querySelector(`#${this.elementIDs[this.formType].error}`)
+            if (displayError && event.error) {
+                displayError.textContent = event.error.message || null;
+            }
         });
     }
 
@@ -365,7 +296,7 @@ class StripeForm implements PaymentForm {
      * @private
      */
     private async setupForm(options?: PaymentProviderFormOptions): Promise<void> {
-        const form = document.querySelector(PaymentFormContainer)
+        const form = document.querySelector(`#${this.elementIDs[this.formType].form}`)
 
         if (!form) {
             logError("Payment form: no form provided")
@@ -376,26 +307,18 @@ class StripeForm implements PaymentForm {
             event.preventDefault()
             this.setButtonState("processing")
 
-            if (!this.stripe) {
-                logError("Stripe: not initialized")
-                return
-            }
-
-            if (!this.elements) {
-                logError('Stripe: elements not initialized')
+            if (!this.stripe || !this.elements) {
+                logError("Stripe or elements not initialized")
                 return
             }
 
             try {
-                if (!this.paymentElement) {
-                    throw new Error('Card element not initialized');
-                }
-
-                const { error, setupIntent } = await this.stripe.confirmCardSetup(this.customer!.client_secret, {
-                    payment_method: {
-                        card: this.paymentElement,
+                const { error, setupIntent } = await this.stripe.confirmSetup({
+                    elements: this.elements,
+                    confirmParams: {
+                        return_url: this.ensureHttpsUrl(options?.successUrl || window.location.href),
                     },
-                    return_url: this.ensureHttpsUrl(options?.successUrl || window.location.href),
+                    redirect: 'if_required'
                 });
 
                 if (error) {
@@ -404,9 +327,15 @@ class StripeForm implements PaymentForm {
 
                 // Create subscription using the customer_id and payment_method_id
                 const paymentMethodId = setupIntent.payment_method as string;
-                await this.createSubscription(this.currentProductId!, this.currentPaywallId, this.currentPlacementId, this.customer!.id, paymentMethodId);
+                await this.createSubscription(
+                    this.currentProductId!, 
+                    this.currentPaywallId, 
+                    this.currentPlacementId, 
+                    this.customer!.id, 
+                    paymentMethodId
+                );
 
-                // Deep link handling and cookie setting
+                // Handle deep link and redirect
                 const deepLink = this.subscription!.deep_link;
                 if (deepLink) {
                     setCookie(DeepLinkURL, deepLink, SelectedProductDuration);
@@ -421,12 +350,12 @@ class StripeForm implements PaymentForm {
                 }, config.redirectDelay);
 
             } catch (error) {
-                logError("Failed to confirm card setup:", error)
+                logError("Failed to confirm setup:", error)
                 this.setButtonState("ready")
                 
-                const errorElement = document.querySelector('#error-message')
+                const errorElement = document.querySelector(`#${this.elementIDs[this.formType].error}`)
                 if (errorElement) {
-                    errorElement.textContent = "Failed to initialize payment form. Please try again."
+                    errorElement.textContent = error instanceof Error ? error.message : "Failed to process payment. Please try again."
                 }
                 
                 this.formBuilder.emit("payment_failure", {

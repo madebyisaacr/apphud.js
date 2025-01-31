@@ -11,7 +11,7 @@ declare class FormBuilder implements PaymentFormBuilder {
      * @param placementId - placement id user purchased from
      * @param options - Form options. Success URL / Failure URL
      */
-    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options: PaymentProviderFormOptions, bundle?: ProductBundle): Promise<void>;
+    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options?: PaymentProviderFormOptions, bundle?: ProductBundle): Promise<void>;
     /**
      * Track event
      * @param eventName - event name

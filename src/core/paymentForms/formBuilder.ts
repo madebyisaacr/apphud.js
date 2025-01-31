@@ -27,7 +27,7 @@ class FormBuilder implements PaymentFormBuilder {
         productId: string, 
         paywallId: string | undefined, 
         placementId: string | undefined, 
-        options: PaymentProviderFormOptions,
+        options: PaymentProviderFormOptions = {},
         bundle?: ProductBundle
     ): Promise<void> {
         let form: PaymentForm
