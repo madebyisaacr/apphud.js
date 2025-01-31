@@ -428,18 +428,16 @@ export default class ApphudSDK implements Apphud {
         // Process all products in the bundle
         bundle.products.forEach(product => {
             const requiredStore = product.store;
-            const requiredProviderId = product.payment_provider_id;
             
-            const compatibleProvider = paymentProviders.find(p => 
-                p.kind === requiredStore && 
-                p.id === requiredProviderId
+            const compatibleProvider = paymentProviders.find(provider => 
+                provider.kind === requiredStore
             );
             
             if (compatibleProvider) {
                 this._currentProducts.set(requiredStore, product);
                 this.currentPaymentProviders.set(requiredStore, compatibleProvider);
             } else {
-                logError(`No compatible payment provider found for store type: ${requiredStore} and provider ID: ${requiredProviderId}`);
+                logError(`No compatible payment provider found for store type: ${requiredStore}`);
             }
         });
 
