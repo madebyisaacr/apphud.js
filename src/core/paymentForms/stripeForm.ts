@@ -18,7 +18,23 @@ import {config} from "../config/config";
 import FormBuilder from "./formBuilder";
 
 class StripeForm implements PaymentForm {
-    private elementID = "stripe-payment-element"
+    private readonly elementIDs = {
+        new: {
+            form: "apphud-stripe-payment-form",
+            payment: "stripe-payment-element",
+            submit: "stripe-submit",
+            error: "stripe-error-message"
+        },
+        old: {
+            form: "apphud-payment-form",
+            payment: "payment-element",
+            submit: "submit",
+            error: "error-message"
+        }
+    }
+    
+    private formType: 'new' | 'old' = 'new';
+    
     private stripe: Stripe | null = null
     private elements: StripeElements | undefined = undefined
     private paymentElement: StripePaymentElement | null = null
@@ -56,7 +72,8 @@ class StripeForm implements PaymentForm {
                 padding: 10px 0;
             }
 
-            #stripe-payment-element {
+            #${this.elementIDs.new.payment},
+            #${this.elementIDs.old.payment} {
                 width: 100%;
             }
         `;
@@ -88,10 +105,13 @@ class StripeForm implements PaymentForm {
         this.subscriptionOptions = subscriptionOptions;
         this.formBuilder.emit("payment_form_initialized", { paymentProvider: "stripe", event: { selector: "#apphud-stripe-payment-form" } })
 
-        const submitButton = document.querySelector('#stripe-submit')
+        // Detect which form type is present
+        this.formType = document.getElementById(this.elementIDs.new.form) ? 'new' : 'old';
+        
+        const submitButton = document.querySelector(`#${this.elementIDs[this.formType].submit}`)
 
         if (!submitButton) {
-            logError("Submit button is required. Add <button id=\"stripe-submit\">Pay</button>")
+            logError(`Submit button is required. Add <button id="${this.elementIDs[this.formType].submit}">Pay</button>`)
             return
         }
 
@@ -118,7 +138,7 @@ class StripeForm implements PaymentForm {
             logError("Failed to initialize Stripe form:", error)
             this.setButtonState("ready")
             
-            const errorElement = document.querySelector('#stripe-error-message')
+            const errorElement = document.querySelector(`#${this.elementIDs[this.formType].error}`)
             if (errorElement) {
                 errorElement.textContent = "Failed to initialize payment form. Please try again."
             }
@@ -236,10 +256,10 @@ class StripeForm implements PaymentForm {
         // Create and mount the Payment Element
         const paymentElement = this.elements.create('payment')
         
-        const paymentElementContainer = document.getElementById(this.elementID);
+        const paymentElementContainer = document.getElementById(this.elementIDs[this.formType].payment);
         if (paymentElementContainer) {
             paymentElementContainer.innerHTML = '<div class="stripe-element-container"></div>';
-            paymentElement.mount(`#${this.elementID} .stripe-element-container`);
+            paymentElement.mount(`#${this.elementIDs[this.formType].payment} .stripe-element-container`);
         }
 
         this.paymentElement = paymentElement;
@@ -252,7 +272,7 @@ class StripeForm implements PaymentForm {
 
         // Event listener for change events
         paymentElement.on('change', (event: StripePaymentElementChangeEvent) => {
-            const displayError = document.querySelector("#stripe-error-message")
+            const displayError = document.querySelector(`#${this.elementIDs[this.formType].error}`)
             if (displayError) {
                 // Clear any previous error messages when the form is valid
                 if (event.complete) {
@@ -263,7 +283,7 @@ class StripeForm implements PaymentForm {
 
         // Add a separate error event listener for loader errors
         paymentElement.on('loaderror', (event) => {
-            const displayError = document.querySelector("#stripe-error-message")
+            const displayError = document.querySelector(`#${this.elementIDs[this.formType].error}`)
             if (displayError && event.error) {
                 displayError.textContent = event.error.message || null;
             }
@@ -276,7 +296,7 @@ class StripeForm implements PaymentForm {
      * @private
      */
     private async setupForm(options?: PaymentProviderFormOptions): Promise<void> {
-        const form = document.querySelector("#apphud-stripe-payment-form")
+        const form = document.querySelector(`#${this.elementIDs[this.formType].form}`)
 
         if (!form) {
             logError("Payment form: no form provided")
@@ -333,7 +353,7 @@ class StripeForm implements PaymentForm {
                 logError("Failed to confirm setup:", error)
                 this.setButtonState("ready")
                 
-                const errorElement = document.querySelector('#stripe-error-message')
+                const errorElement = document.querySelector(`#${this.elementIDs[this.formType].error}`)
                 if (errorElement) {
                     errorElement.textContent = error instanceof Error ? error.message : "Failed to process payment. Please try again."
                 }

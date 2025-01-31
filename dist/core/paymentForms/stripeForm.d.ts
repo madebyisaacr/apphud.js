@@ -5,7 +5,8 @@ declare class StripeForm implements PaymentForm {
     private providerId;
     private accountId;
     private formBuilder;
-    private elementID;
+    private readonly elementIDs;
+    private formType;
     private stripe;
     private elements;
     private paymentElement;
