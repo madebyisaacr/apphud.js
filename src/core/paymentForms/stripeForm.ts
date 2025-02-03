@@ -4,7 +4,7 @@ import {
     DeepLinkURL,
     SelectedProductDuration,
 } from "../config/constants"
-import {CustomerSetup, PaymentForm, PaymentProviderFormOptions, Subscription, User, SubscriptionOptions} from "../../types"
+import {CustomerSetup, PaymentForm, PaymentProviderFormOptions, Subscription, User, StripeSubscriptionOptions} from "../../types"
 import {
     loadStripe,
     Stripe,
@@ -46,7 +46,7 @@ class StripeForm implements PaymentForm {
     private currentProductId: string | null = null;
     private currentPaywallId: string | undefined;
     private currentPlacementId: string | undefined;
-    private subscriptionOptions?: SubscriptionOptions;
+    private subscriptionOptions?: StripeSubscriptionOptions;
 
     constructor(private user: User, private providerId: string, private accountId: string, private formBuilder: FormBuilder) {
         documentReady(async () => {
@@ -97,7 +97,7 @@ class StripeForm implements PaymentForm {
         paywallId: string | undefined, 
         placementId: string | undefined, 
         options: PaymentProviderFormOptions = {},
-        subscriptionOptions?: SubscriptionOptions
+        subscriptionOptions?: StripeSubscriptionOptions
     ): Promise<void> {
         this.currentProductId = productId;
         this.currentPaywallId = paywallId;
@@ -194,8 +194,8 @@ class StripeForm implements PaymentForm {
             user_id: this.user.id,
             customer_id: customerId,
             payment_method_id: paymentMethodId,
-            ...(this.subscriptionOptions?.trialDays && { trial_period_days: this.subscriptionOptions.trialDays }),
-            ...(this.subscriptionOptions?.discountId && { discount_id: this.subscriptionOptions.discountId })
+            ...(this.subscriptionOptions?.trialDays && { stripe_free_trial_days: this.subscriptionOptions.trialDays }),
+            ...(this.subscriptionOptions?.couponId && { stripe_coupon_id: this.subscriptionOptions.couponId })
         };
 
         log('Creating subscription with payload:', payload);

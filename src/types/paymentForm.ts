@@ -56,4 +56,14 @@ export interface PaddleAppearanceOptions {
 export interface SubscriptionOptions {
     trialDays?: number;
     discountId?: string;
+    couponId?: string;
+}
+
+export interface StripeSubscriptionOptions {
+    trialDays?: number;
+    couponId?: string;
+}
+
+export interface PaddleSubscriptionOptions {
+    discountId?: string;
 }

@@ -1,4 +1,4 @@
-import { PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, SubscriptionOptions } from "../../types";
+import { PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, PaddleSubscriptionOptions } from "../../types";
 import FormBuilder from "./formBuilder";
 declare class PaddleForm implements PaymentForm {
     private user;
@@ -22,7 +22,7 @@ declare class PaddleForm implements PaymentForm {
      * @param options - Form options including success URL and appearance customization
      * @param subscriptionOptions - Subscription options for the subscription
      */
-    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options?: PaymentProviderFormOptions, subscriptionOptions?: SubscriptionOptions): Promise<void>;
+    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options?: PaymentProviderFormOptions, subscriptionOptions?: PaddleSubscriptionOptions): Promise<void>;
     private setupFormElements;
     /**
      * Setup checkout configuration and form submission handler
