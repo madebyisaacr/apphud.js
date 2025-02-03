@@ -1,6 +1,6 @@
 import {log, logError} from "../../utils";
 import {initializePaddle, Paddle, CheckoutOpenOptions, PaddleEventData} from '@paddle/paddle-js'
-import {PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, Subscription, SubscriptionOptions} from "../../types";
+import {PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, Subscription, PaddleSubscriptionOptions} from "../../types";
 import FormBuilder from "./formBuilder";
 import {config} from "../config/config";
 import api from "../api";
@@ -66,7 +66,7 @@ class PaddleForm implements PaymentForm {
         paywallId: string | undefined, 
         placementId: string | undefined, 
         options: PaymentProviderFormOptions = {},
-        subscriptionOptions?: SubscriptionOptions
+        subscriptionOptions?: PaddleSubscriptionOptions
     ): Promise<void> {
         this.currentOptions = options
         
@@ -291,15 +291,14 @@ class PaddleForm implements PaymentForm {
         productId: string, 
         paywallId: string | undefined, 
         placementId: string | undefined,
-        subscriptionOptions?: SubscriptionOptions
+        subscriptionOptions?: PaddleSubscriptionOptions
     ): Promise<void> {
         const payload = {
             product_id: productId,
             paywall_id: paywallId,
             placement_id: placementId,
             user_id: this.user.id,
-            ...(subscriptionOptions?.trialDays && { trial_period_days: subscriptionOptions.trialDays }),
-            ...(subscriptionOptions?.discountId && { discount_id: subscriptionOptions.discountId })
+            ...(subscriptionOptions?.discountId && { paddle_discount_id: subscriptionOptions.discountId })
         }
 
         log('Creating subscription with payload:', payload);

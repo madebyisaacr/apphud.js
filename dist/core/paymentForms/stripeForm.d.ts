@@ -1,4 +1,4 @@
-import { PaymentForm, PaymentProviderFormOptions, User, SubscriptionOptions } from "../../types";
+import { PaymentForm, PaymentProviderFormOptions, User, StripeSubscriptionOptions } from "../../types";
 import FormBuilder from "./formBuilder";
 declare class StripeForm implements PaymentForm {
     private user;
@@ -29,7 +29,7 @@ declare class StripeForm implements PaymentForm {
      * @param options - Form options. Success URL / Failure URL
      * @param subscriptionOptions - Optional subscription options
      */
-    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options?: PaymentProviderFormOptions, subscriptionOptions?: SubscriptionOptions): Promise<void>;
+    show(productId: string, paywallId: string | undefined, placementId: string | undefined, options?: PaymentProviderFormOptions, subscriptionOptions?: StripeSubscriptionOptions): Promise<void>;
     private setButtonState;
     /**
      * Create subscription
