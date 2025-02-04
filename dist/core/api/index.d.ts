@@ -4,7 +4,7 @@ declare const _default: {
     createEvent: (data: Events) => Promise<Message>;
     baseHeaders: () => HeadersInit;
     createSubscription: (providerId: string, data: SubscriptionParams) => Promise<Subscription>;
-    setAttribution: (deviceId: string, data: AttributionData) => Promise<SuccessMessage>;
+    setAttribution: (queryParams: string, data: AttributionData) => Promise<SuccessMessage>;
     createCustomer: (providerId: string, data: CustomerParams) => Promise<CustomerSetup>;
 };
 export default _default;

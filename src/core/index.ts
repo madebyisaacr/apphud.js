@@ -356,6 +356,26 @@ export default class ApphudSDK implements Apphud {
 
         this.setCurrentItems(placementID, bundleIndex);
         setCookie(SelectedBundleIndex, `${placementID},${bundleIndex}`, SelectedProductDuration);
+        
+        const formElements = {
+            stripe: document.getElementById('stripe-payment-element'),
+            paddle: document.getElementById('paddle-payment-element')
+        };
+        
+        Object.values(formElements).forEach(element => {
+            if (element) {
+                element.innerHTML = '';
+            }
+        });
+        
+        const availableProducts = this._currentProducts;
+        log("Available products for providers:", availableProducts);
+        
+        availableProducts.forEach((product, provider) => {
+            log(`Initializing payment form for provider: ${provider}`);
+            this.paymentForm({ paymentProvider: provider });
+        });
+        
         this.emit("product_changed", this.currentProduct());
     }
 
@@ -451,42 +471,66 @@ export default class ApphudSDK implements Apphud {
 
     /**
      * Set attribution data to user
+     * @param queryParams - URL query parameters as string
      * @param data - attribution data dictionary
      */
-    public setAttribution(data: AttributionData): void {
+    public setAttribution(queryParams: string, data: AttributionData): void {
         this.checkInitialization();
 
-        log("SetAttribution", data, this.getUserID()!)
+        log("SetAttribution", queryParams, data);
 
-
-        api.setAttribution(this.getUserID()!, data).then(r => log("Attribution set", r))
+        api.setAttribution(queryParams, data)
+            .then(r => log("Attribution set", r));
     }
 
     private operateAttribution() {
         log("Prepare Attribution")
         const attribution: AttributionData = {}
+        const queryParams = new URLSearchParams()
+        queryParams.append('device_id', this.getUserID()!)
 
         this.ready((): void => {
-            const apphudData = this.prepareApphudAttributionData()
+            const urlParams = this.getQueryParamsAsJson()
+            const attributionIds = ['ttclid', 'fbclid']
+            
+            attributionIds.forEach(id => {
+                if (urlParams[id]) {
+                    queryParams.append(id, urlParams[id] as string)
+                }
+            })
 
             // prepare apphud attribution data
+            const apphudData = this.prepareApphudAttributionData()
+            
+            // Add all other URL parameters to apphud_attribution_data
+            const otherParams = Object.entries(urlParams)
+                .filter(([key]) => !attributionIds.includes(key))
+                .reduce((acc, [key, value]) => {
+                    acc[`url_param_${key}`] = value;
+                    return acc;
+                }, {} as Record<string, string | string[]>)
+
             if (apphudData) {
-                attribution["apphud_attribution_data"] = apphudData
+                attribution["apphud_attribution_data"] = {
+                    ...apphudData,
+                    ...otherParams
+                }
             }
 
             // prepare gtag attribution
             const gtagClientID = this.retrieveGtagClientID()
             if (gtagClientID) {
                 log("gtag client_id:", gtagClientID)
-                attribution["firebase_id"] = gtagClientID
+                queryParams.append('firebase_id', gtagClientID)
             }
 
             // prepare facebook attribution
             if (typeof(window.fbq) !== 'undefined') {
-                attribution["facebook_data"] = {
-                    fbp: getCookie('_fbp'),
-                    fbc: getCookie('_fbc'),
-                }
+                const fbp = getCookie('_fbp')
+                const fbc = getCookie('_fbc')
+                
+                if (fbp) queryParams.append('fbp', fbp)
+                if (fbc) queryParams.append('fbc', fbc)
 
                 if (this.hashedUserID) {
                     console.log('set external_id to fb: ', this.hashedUserID);
@@ -497,16 +541,15 @@ export default class ApphudSDK implements Apphud {
                 }
             }
 
-            this.setAttribution(attribution)
+            this.setAttribution(queryParams.toString(), attribution);
         })
     }
 
     private prepareApphudAttributionData(): Record<string, string | string[] | null> {
-        const data = this.getQueryParamsAsJson()
-        data["user_agent"] = navigator.userAgent
-        data["referrer"] = document.location.origin + document.location.pathname
-
-        return data
+        return {
+            "user_agent": navigator.userAgent,
+            "referrer": document.location.origin + document.location.pathname
+        }
     }
 
     /**

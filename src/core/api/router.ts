@@ -4,7 +4,7 @@ import {EVENTS, PAYMENT_INTENT, USERS, SUBSCRIBE, ATTRIBUTION, PAYMENT_PROVIDER_
 interface Router {
     userUrl: () => string
     eventUrl: () => string
-    attributionUrl: (deviceId: string) => string
+    attributionUrl: (queryParams: string) => string
     paymentIntentUrl: (providerId: string) => string
     subscribeUrl: (providerId: string) => string
     customerUrl: (providerId: string) => string
@@ -17,8 +17,8 @@ const router: Router = {
     eventUrl(): string {
         return config.baseURL + EVENTS
     },
-    attributionUrl(deviceId: string): string {
-        return config.baseURL + ATTRIBUTION + '?device_id='+deviceId
+    attributionUrl(queryParams: string): string {
+        return config.baseURL + ATTRIBUTION + '?' + queryParams
     },
     paymentIntentUrl(providerId: string): string {
         return config.baseURL + PAYMENT_INTENT.replace(':id', providerId)

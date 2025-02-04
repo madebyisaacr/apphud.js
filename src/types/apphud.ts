@@ -187,9 +187,10 @@ export interface Apphud {
 
     /**
      * Sets attribution data for the user.
-     * @param {ApphudHash} data - Attribution data to be set.
+     * @param {string} queryParams - URL query parameters
+     * @param {AttributionData} data - Attribution data to be set.
      */
-    setAttribution: (data: ApphudHash) => void;
+    setAttribution: (queryParams: string, data: AttributionData) => void;
 
     /**
      * Sets the user's preferred language.

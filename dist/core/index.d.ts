@@ -92,9 +92,10 @@ export default class ApphudSDK implements Apphud {
     private updateProductsAndProviders;
     /**
      * Set attribution data to user
+     * @param queryParams - URL query parameters as string
      * @param data - attribution data dictionary
      */
-    setAttribution(data: AttributionData): void;
+    setAttribution(queryParams: string, data: AttributionData): void;
     private operateAttribution;
     private prepareApphudAttributionData;
     /**

@@ -39,9 +39,8 @@ const createUser = async (data: CustomerData): Promise<User> => {
     return response.data.results as User;
 }
 
-const setAttribution = async (deviceId: string, data: AttributionData): Promise<SuccessMessage> => {
-    const response = await sendRequest('POST', router.attributionUrl(deviceId), data)
-
+const setAttribution = async (queryParams: string, data: AttributionData): Promise<SuccessMessage> => {
+    const response = await sendRequest('POST', router.attributionUrl(queryParams), data)
     return response.data.results as SuccessMessage;
 }
 
