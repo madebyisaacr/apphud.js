@@ -12,6 +12,7 @@ declare class PaddleForm implements PaymentForm {
     private submitProcessingText;
     private currentOptions;
     private subscription;
+    private checkoutData;
     constructor(user: User, provider: PaymentProvider, formBuilder: FormBuilder);
     private initializePaddleInstance;
     /**
