@@ -317,7 +317,7 @@ class PaddleForm implements PaymentForm {
             paywall_id: paywallId,
             placement_id: placementId,
             user_id: this.user.id,
-            ...(subscriptionOptions?.discountId && { paddle_discount_id: subscriptionOptions.discountId })
+            ...(subscriptionOptions?.discountId && { discount_id: subscriptionOptions.discountId })
         }
 
         log('Creating subscription with payload:', payload);

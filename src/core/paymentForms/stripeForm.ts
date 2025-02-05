@@ -194,8 +194,8 @@ class StripeForm implements PaymentForm {
             user_id: this.user.id,
             customer_id: customerId,
             payment_method_id: paymentMethodId,
-            ...(this.subscriptionOptions?.trialDays && { stripe_free_trial_days: this.subscriptionOptions.trialDays }),
-            ...(this.subscriptionOptions?.couponId && { stripe_coupon_id: this.subscriptionOptions.couponId })
+            ...(this.subscriptionOptions?.trialDays && { trial_period_days: this.subscriptionOptions.trialDays }),
+            ...(this.subscriptionOptions?.couponId && { discount_id: this.subscriptionOptions.couponId })
         };
 
         log('Creating subscription with payload:', payload);
