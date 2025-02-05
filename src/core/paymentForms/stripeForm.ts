@@ -313,7 +313,8 @@ class StripeForm implements PaymentForm {
             }
 
             try {
-                const { error, setupIntent } = await this.stripe.confirmSetup({
+                // Step 1: Confirm SetupIntent first
+                const { error: setupError, setupIntent } = await this.stripe.confirmSetup({
                     elements: this.elements,
                     confirmParams: {
                         return_url: this.ensureHttpsUrl(options?.successUrl || window.location.href),
@@ -321,11 +322,11 @@ class StripeForm implements PaymentForm {
                     redirect: 'if_required'
                 });
 
-                if (error) {
-                    throw error;
+                if (setupError) {
+                    throw setupError;
                 }
 
-                // Create subscription using the customer_id and payment_method_id
+                // Step 2: Create subscription using the payment method
                 const paymentMethodId = setupIntent.payment_method as string;
                 await this.createSubscription(
                     this.currentProductId!, 
@@ -335,7 +336,17 @@ class StripeForm implements PaymentForm {
                     paymentMethodId
                 );
 
-                // Handle deep link and redirect
+                // Step 3: Confirm payment if needed (subscription returned client_secret)
+                if (this.subscription?.client_secret) {
+                    const { error: confirmError } = await this.stripe.confirmCardPayment(
+                        this.subscription.client_secret
+                    );
+                    if (confirmError) {
+                        throw confirmError;
+                    }
+                }
+
+                // Handle successful subscription
                 const deepLink = this.subscription!.deep_link;
                 if (deepLink) {
                     setCookie(DeepLinkURL, deepLink, SelectedProductDuration);
@@ -350,7 +361,7 @@ class StripeForm implements PaymentForm {
                 }, config.redirectDelay);
 
             } catch (error) {
-                logError("Failed to confirm setup:", error)
+                logError("Failed to process payment:", error)
                 this.setButtonState("ready")
                 
                 const errorElement = document.querySelector(`#${this.elementIDs[this.formType].error}`)
