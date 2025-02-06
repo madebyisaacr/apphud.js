@@ -328,8 +328,9 @@ export default class ApphudSDK implements Apphud {
      * Save selected placement and bundle
      * @param placementID - identifier of placement
      * @param bundleIndex - index of product bundle in placement paywall
+     * @param initializePaymentForms - whether to initialize payment forms (default: true)
      */
-    public selectPlacementProduct(placementID: string, bundleIndex: number): void {
+    public selectPlacementProduct(placementID: string, bundleIndex: number, initializePaymentForms: boolean = false): void {
         this.checkInitialization();
 
         log("Save placement and bundle", placementID, bundleIndex);
@@ -357,24 +358,26 @@ export default class ApphudSDK implements Apphud {
         this.setCurrentItems(placementID, bundleIndex);
         setCookie(SelectedBundleIndex, `${placementID},${bundleIndex}`, SelectedProductDuration);
         
-        const formElements = {
-            stripe: document.getElementById('stripe-payment-element'),
-            paddle: document.getElementById('paddle-payment-element')
-        };
-        
-        Object.values(formElements).forEach(element => {
-            if (element) {
-                element.innerHTML = '';
-            }
-        });
-        
-        const availableProducts = this._currentProducts;
-        log("Available products for providers:", availableProducts);
-        
-        availableProducts.forEach((product, provider) => {
-            log(`Initializing payment form for provider: ${provider}`);
-            this.paymentForm({ paymentProvider: provider });
-        });
+        if (initializePaymentForms) {
+            const formElements = {
+                stripe: document.getElementById('stripe-payment-element'),
+                paddle: document.getElementById('paddle-payment-element')
+            };
+            
+            Object.values(formElements).forEach(element => {
+                if (element) {
+                    element.innerHTML = '';
+                }
+            });
+            
+            const availableProducts = this._currentProducts;
+            log("Available products for providers:", availableProducts);
+            
+            availableProducts.forEach((product, provider) => {
+                log(`Initializing payment form for provider: ${provider}`);
+                this.paymentForm({ paymentProvider: provider });
+            });
+        }
         
         this.emit("product_changed", this.currentProduct());
     }
