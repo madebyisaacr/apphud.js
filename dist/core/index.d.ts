@@ -73,8 +73,9 @@ export default class ApphudSDK implements Apphud {
      * Save selected placement and bundle
      * @param placementID - identifier of placement
      * @param bundleIndex - index of product bundle in placement paywall
+     * @param initializePaymentForms - whether to initialize payment forms (default: true)
      */
-    selectPlacementProduct(placementID: string, bundleIndex: number): void;
+    selectPlacementProduct(placementID: string, bundleIndex: number, initializePaymentForms?: boolean): void;
     /**
      * Set current placement, paywall, product bundle and compatible product
      * @param placementID - placement identifier

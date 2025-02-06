@@ -31,7 +31,6 @@ class PaddleForm implements PaymentForm {
     private submitProcessingText = "Please wait..."
     private currentOptions: PaymentProviderFormOptions | null = null
     private subscription: Subscription | null = null
-    private checkoutData: { productId: string; paywallId: string | undefined; placementId: string | undefined; subscriptionOptions?: PaddleSubscriptionOptions } | null = null
 
     constructor(private user: User, private provider: PaymentProvider, private formBuilder: FormBuilder) {
         this.initializePaddleInstance()
@@ -71,11 +70,12 @@ class PaddleForm implements PaymentForm {
     ): Promise<void> {
         this.currentOptions = options
         
-        this.checkoutData = {
-            productId,
-            paywallId,
-            placementId,
-            subscriptionOptions
+        // Create subscription first, before initializing the form
+        try {
+            await this.createSubscription(productId, paywallId, placementId, subscriptionOptions)
+        } catch (error) {
+            logError('Failed to create subscription', error)
+            return
         }
         
         // Detect which form type is present
@@ -155,25 +155,34 @@ class PaddleForm implements PaymentForm {
             throw new Error("Payment form: no form provided")
         }
 
-        const checkoutConfig: CheckoutOpenOptions = {
+        const baseConfig = {
             settings: {
-                displayMode: "overlay",
+                displayMode: "overlay" as const,
                 theme: options?.paddleAppearance?.theme || "light",
                 locale: this.user.locale || "en"
             },
-            items: [{
-                priceId: productId,
-                quantity: 1
-            }],
             customData: {
                 apphud_client_id: this.user.id,
                 paywall_id: paywallId ?? "unknown",
                 placement_id: placementId ?? "unknown",
             },
-            // customer: this.user.email ? {
-            //     email: this.user.email
-            // } : undefined
+            customer: {
+                id: this.subscription?.customer_id!,
+            }
         }
+
+        const checkoutConfig: CheckoutOpenOptions = this.subscription?.id 
+            ? {
+                ...baseConfig,
+                transactionId: this.subscription.id
+            }
+            : {
+                ...baseConfig,
+                items: [{
+                    priceId: productId,
+                    quantity: 1
+                }]
+            }
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault()
@@ -213,43 +222,27 @@ class PaddleForm implements PaymentForm {
         switch (event.name) {
             case "checkout.completed":
                 log("Payment completed successfully")
+                
+                const deepLink = this.subscription?.deep_link
 
-                if (!this.checkoutData) {
-                    logError("Checkout data not found")
-                    return
+                if (deepLink) {
+                    setCookie(DeepLinkURL, deepLink, SelectedProductDuration)
                 }
 
-                try {
-                    await this.createSubscription(
-                        this.checkoutData.productId,
-                        this.checkoutData.paywallId,
-                        this.checkoutData.placementId,
-                        this.checkoutData.subscriptionOptions
-                    )
-
-                    const deepLink = this.subscription?.deep_link
-
-                    if (deepLink) {
-                        setCookie(DeepLinkURL, deepLink, SelectedProductDuration)
+                this.formBuilder.emit("payment_success", {
+                    paymentProvider: "paddle",
+                    event: {
+                        user_id: this.user.id,
                     }
+                })
 
-                    this.formBuilder.emit("payment_success", {
-                        paymentProvider: "paddle",
-                        event: {
-                            user_id: this.user.id,
-                        }
-                    })
-
-                    setTimeout(() => {
-                        if (options?.successUrl && options.successUrl !== 'undefined') {
-                            document.location.href = options?.successUrl
-                        } else {
-                            document.location.href = config.baseSuccessURL+'/'+deepLink
-                        }
-                    }, config.redirectDelay)
-                } catch (error) {
-                    logError("Failed to create subscription after payment:", error)
-                }
+                setTimeout(() => {
+                    if (options?.successUrl && options.successUrl !== 'undefined') {
+                        document.location.href = options?.successUrl
+                    } else {
+                        document.location.href = config.baseSuccessURL+'/'+deepLink
+                    }
+                }, config.redirectDelay)
                 break;
                 
             case "checkout.error":
