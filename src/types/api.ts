@@ -24,6 +24,7 @@ export interface Subscription {
     id: string
     client_secret?: string
     deep_link?: string
+    customer_id?: string
 }
 
 export interface CustomerSetup {
@@ -33,5 +34,5 @@ export interface CustomerSetup {
 
 export interface CustomerParams {
     user_id: string
-    payment_methods: string[]
+    payment_methods?: string[]
 }
