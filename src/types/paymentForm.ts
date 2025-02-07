@@ -29,6 +29,7 @@ export interface PaymentProviderFormOptions {
     failureUrl?: string
     stripeAppearance?: StripeAppearanceOptions
     paddleAppearance?: PaddleAppearanceOptions
+    elementID?: string
 }
 
 export interface Country {
@@ -47,6 +48,9 @@ export interface StripeAppearanceOptions {
     theme?: Appearance['theme'];
     variables?: Appearance['variables'];
     layout?: Layout
+    rules?: Appearance['rules']
+    disableAnimations?: boolean
+    labels?: Appearance['labels']
 }
 
 export interface PaddleAppearanceOptions {
