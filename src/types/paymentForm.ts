@@ -1,5 +1,5 @@
 import { PaymentProviderKind, ProductBundle } from "./apphud";
-import { Appearance, Layout } from "@stripe/stripe-js";
+import { Appearance, Layout, StripePaymentElementOptions } from "@stripe/stripe-js";
 
 export interface PaymentForm {
     show: (

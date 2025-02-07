@@ -31,11 +31,14 @@ import {
     Product,
     User,
     PaymentProviderKind,
-    ProductBundle
+    ProductBundle,
+    StripeAppearanceOptions,
 } from '../types'
 
 import UserAgent from 'ua-parser-js'
 import FormBuilder from "./paymentForms/formBuilder";
+import createStripeExpressCheckout from "./paymentForms/stripeExpressCheckout";
+import { StripePaymentElementOptions } from '@stripe/stripe-js';
 
 /**
  * The main interface for the Apphud SDK. This should be initialized
@@ -990,6 +993,41 @@ export default class ApphudSDK implements Apphud {
         }
 
         return null
+    }
+
+    public createStripeExpressCheckout(
+        elementId: string,
+        appearance: StripeAppearanceOptions,
+        options: StripePaymentElementOptions
+    ): void {
+        this.checkInitialization();
+
+        const stripe = this.currentPaymentProviders.get("stripe")
+
+        if (!stripe) {
+            logError("Stripe payment provider not found");
+            return;
+        }
+
+        const targetProduct = this.currentProductForProvider("stripe")
+
+        if (!targetProduct) {
+            logError("Target product not found for Stripe provider");
+            return;
+        }
+
+        createStripeExpressCheckout({
+            elementId,
+            appearance,
+            options,
+            productId: targetProduct!.base_plan_id,
+            paywallId: this.currentPaywall()!.id,
+            placementId: this.currentPlacement()!.id,
+            providerId: stripe?.id || "",
+            accountId: stripe?.identifier || "",
+            user: this.user!,
+            bundle: this._currentBundle
+        });
     }
 
     /**
