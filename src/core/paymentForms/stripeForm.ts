@@ -46,6 +46,7 @@ class StripeForm implements PaymentForm {
     private currentPlacementId: string | undefined;
     private subscriptionOptions?: StripeSubscriptionOptions;
     private elementIDs: { [key: string]: string } = ELEMENT_IDS.old;
+    private buttonStateSetter?: (state: "loading" | "ready" | "processing") => void | undefined;
 
     constructor(private user: User, private providerId: string, private accountId: string, private formBuilder: FormBuilder) {
         documentReady(async () => {
@@ -103,6 +104,7 @@ class StripeForm implements PaymentForm {
         this.currentPlacementId = placementId;
         this.subscriptionOptions = subscriptionOptions;
         this.formBuilder.emit("payment_form_initialized", { paymentProvider: "stripe", event: { selector: "#apphud-stripe-payment-form" } })
+        this.buttonStateSetter = options.buttonStateSetter
 
         // Detect which form type is present
         if (options.elementID) {
@@ -160,6 +162,11 @@ class StripeForm implements PaymentForm {
     private setButtonState(state: "loading" | "ready" | "processing"): void {
         if (!this.submit) {
             logError("Submit button not found. Failed to set state:", state)
+            return
+        }
+
+        if (this.buttonStateSetter) {
+            this.buttonStateSetter(state)
             return
         }
 

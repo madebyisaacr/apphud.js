@@ -30,6 +30,7 @@ export interface PaymentProviderFormOptions {
     stripeAppearance?: StripeAppearanceOptions
     paddleAppearance?: PaddleAppearanceOptions
     elementID?: string
+    buttonStateSetter?: (state: "loading" | "ready" | "processing") => void
 }
 
 export interface Country {
