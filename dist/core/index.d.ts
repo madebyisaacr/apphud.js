@@ -99,11 +99,9 @@ export default class ApphudSDK implements Apphud {
     setAttribution(queryParams: string, data: AttributionData): void;
     private operateAttribution;
     private prepareApphudAttributionData;
-    /**
-     * Retrieve client_id from gtag.js
-     * @private
-     */
-    private retrieveGtagClientID;
+    private retrieveGtagClientIDWithTimeout;
+    private waitForGtag;
+    private getGtagMeasurementId;
     private getQueryParamsAsJson;
     /**
      * Sets the current payment provider based on availability and preference
