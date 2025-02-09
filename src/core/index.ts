@@ -537,7 +537,7 @@ export default class ApphudSDK implements Apphud {
                 if (fbc) queryParams.append('fbc', fbc)
 
                 if (this.hashedUserID && !fbExternalIdSent) {
-                    console.log('set external_id to fb: ', this.hashedUserID);
+                    log('set external_id to fb: ', this.hashedUserID);
                     
                     window.fbq('trackCustom', 'ApphudInit', {
                         external_id: this.hashedUserID,
