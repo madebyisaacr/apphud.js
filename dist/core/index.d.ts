@@ -52,8 +52,9 @@ export default class ApphudSDK implements Apphud {
      * @param name - event name
      * @param properties - event properties
      * @param userProperties - user properties
+     * @param refreshPlacements - whether to refresh placements after tracking (default: false)
      */
-    track(name: string, properties: ApphudHash, userProperties: ApphudHash): boolean;
+    track(name: string, properties: ApphudHash, userProperties: ApphudHash, refreshPlacements?: boolean): boolean;
     /**
      * Set email to current user
      * @param email - user email
@@ -140,6 +141,7 @@ export default class ApphudSDK implements Apphud {
     /**
      * Create event or add it to queue if not ready yet
      * @param event - event data
+     * @param refreshPlacements - whether to refresh placements after tracking
      * @private
      */
     private trackEvent;

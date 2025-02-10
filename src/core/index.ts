@@ -108,7 +108,7 @@ export default class ApphudSDK implements Apphud {
         this.isInitialized = true;
 
         u.documentReady(async (): Promise<void> => {
-            await this.initializeApp()
+            await this.initializeApp(true, true)
         });
     };
 
@@ -171,8 +171,14 @@ export default class ApphudSDK implements Apphud {
      * @param name - event name
      * @param properties - event properties
      * @param userProperties - user properties
+     * @param refreshPlacements - whether to refresh placements after tracking (default: false)
      */
-    public track(name: string, properties: ApphudHash, userProperties: ApphudHash): boolean {
+    public track(
+        name: string, 
+        properties: ApphudHash, 
+        userProperties: ApphudHash, 
+        refreshPlacements: boolean = false
+    ): boolean {
         this.checkInitialization();
 
         // generate unique id
@@ -195,7 +201,7 @@ export default class ApphudSDK implements Apphud {
 
             // wait in case navigating to reduce duplicate events
             setTimeout((): void => {
-                this.trackEvent(event);
+                this.trackEvent(event, refreshPlacements);
             }, 1000);
         });
 
@@ -218,14 +224,17 @@ export default class ApphudSDK implements Apphud {
     /**
      * Start SDK. Create user, set placements, paywalls and products to current state. Trigger ready. Operate variables and prices.
      */
-    private async initializeApp(initial: boolean = true): Promise<void> {
-        const user = await this.createUser(null, false);
+    private async initializeApp(initial: boolean = true, refreshPlacements: boolean = false): Promise<void> {
+        if (refreshPlacements) {
+            const user = await this.createUser(null, false);
 
-        if (user)
-            this.user = user
+            if (user)
+                this.user = user
 
-        this.setPlacementsAndProducts()
-        this.setPaymentProvider()
+            this.setPlacementsAndProducts()
+            this.setPaymentProvider()
+        }
+
         this.operateVariables()
         this.operateAttribution()
 
@@ -759,9 +768,10 @@ export default class ApphudSDK implements Apphud {
     /**
      * Create event or add it to queue if not ready yet
      * @param event - event data
+     * @param refreshPlacements - whether to refresh placements after tracking
      * @private
      */
-    private trackEvent(event: EventData): void {
+    private trackEvent(event: EventData, refreshPlacements: boolean = false): void {
         this.ready(async (): Promise<void> => {
             api.createEvent(this.eventData(event)).then(() => {
                 // remove from queue
@@ -772,7 +782,8 @@ export default class ApphudSDK implements Apphud {
                     }
                 }
                 this.saveEventQueue()
-                this.initializeApp(false)
+                
+                this.initializeApp(false, refreshPlacements)
             })
         });
     }
