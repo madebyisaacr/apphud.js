@@ -209,9 +209,19 @@ class StripeForm implements PaymentForm {
     }    
 
     private async createCustomer(): Promise<CustomerSetup> {
+        const paymentMethods = ['card'];
+        
+        if (config.options?.use_sepa_debit) {
+            paymentMethods.push('sepa_debit');
+        }
+    
+        if (config.options?.use_bancontact) {
+            paymentMethods.push('bancontact');
+        }
+        
         const customer = await api.createCustomer(this.providerId, {
             user_id: this.user.id,
-            payment_methods: ['card', 'bancontact', 'sepa_debit']
+            payment_methods: paymentMethods
         });
     
         if (!customer) {
