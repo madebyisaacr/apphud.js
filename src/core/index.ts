@@ -108,7 +108,7 @@ export default class ApphudSDK implements Apphud {
         this.isInitialized = true;
 
         u.documentReady(async (): Promise<void> => {
-            await this.initializeApp()
+            await this.initializeApp(true, true)
         });
     };
 
@@ -171,8 +171,14 @@ export default class ApphudSDK implements Apphud {
      * @param name - event name
      * @param properties - event properties
      * @param userProperties - user properties
+     * @param refreshPlacements - whether to refresh placements after tracking (default: false)
      */
-    public track(name: string, properties: ApphudHash, userProperties: ApphudHash): boolean {
+    public track(
+        name: string, 
+        properties: ApphudHash, 
+        userProperties: ApphudHash, 
+        refreshPlacements: boolean = false
+    ): boolean {
         this.checkInitialization();
 
         // generate unique id
@@ -195,7 +201,7 @@ export default class ApphudSDK implements Apphud {
 
             // wait in case navigating to reduce duplicate events
             setTimeout((): void => {
-                this.trackEvent(event);
+                this.trackEvent(event, refreshPlacements);
             }, 1000);
         });
 
@@ -218,14 +224,17 @@ export default class ApphudSDK implements Apphud {
     /**
      * Start SDK. Create user, set placements, paywalls and products to current state. Trigger ready. Operate variables and prices.
      */
-    private async initializeApp(initial: boolean = true): Promise<void> {
-        const user = await this.createUser(null, false);
+    private async initializeApp(initial: boolean = true, refreshPlacements: boolean = false): Promise<void> {
+        if (refreshPlacements) {
+            const user = await this.createUser(null, false);
 
-        if (user)
-            this.user = user
+            if (user)
+                this.user = user
 
-        this.setPlacementsAndProducts()
-        this.setPaymentProvider()
+            this.setPlacementsAndProducts()
+            this.setPaymentProvider()
+        }
+
         this.operateVariables()
         this.operateAttribution()
 
@@ -486,13 +495,13 @@ export default class ApphudSDK implements Apphud {
             .then(r => log("Attribution set", r));
     }
 
-    private operateAttribution() {
+    private async operateAttribution() {
         log("Prepare Attribution")
         const attribution: AttributionData = {}
         const queryParams = new URLSearchParams()
         queryParams.append('device_id', this.getUserID()!)
 
-        this.ready((): void => {
+        this.ready(async (): Promise<void> => {
             const urlParams = this.getQueryParamsAsJson()
             const attributionIds = ['ttclid', 'fbclid']
             
@@ -521,7 +530,7 @@ export default class ApphudSDK implements Apphud {
             }
 
             // prepare gtag attribution
-            const gtagClientID = this.retrieveGtagClientID()
+            const gtagClientID = await this.retrieveGtagClientIDWithTimeout(5000);
             if (gtagClientID) {
                 log("gtag client_id:", gtagClientID)
                 queryParams.append('firebase_id', gtagClientID)
@@ -531,16 +540,19 @@ export default class ApphudSDK implements Apphud {
             if (typeof(window.fbq) !== 'undefined') {
                 const fbp = getCookie('_fbp')
                 const fbc = getCookie('_fbc')
+                const fbExternalIdSent = getCookie('apphud_fb_external_id_sent')
                 
                 if (fbp) queryParams.append('fbp', fbp)
                 if (fbc) queryParams.append('fbc', fbc)
 
-                if (this.hashedUserID) {
-                    console.log('set external_id to fb: ', this.hashedUserID);
-
+                if (this.hashedUserID && !fbExternalIdSent) {
+                    log('set external_id to fb: ', this.hashedUserID);
+                    
                     window.fbq('trackCustom', 'ApphudInit', {
                         external_id: this.hashedUserID,
-                    })
+                    });
+                    
+                    setCookie('apphud_fb_external_id_sent', 'true', UserCookieDuration);
                 }
             }
 
@@ -555,18 +567,80 @@ export default class ApphudSDK implements Apphud {
         }
     }
 
-    /**
-     * Retrieve client_id from gtag.js
-     * @private
-     */
-    private retrieveGtagClientID(): string | null {
-        if (typeof(window.gaGlobal) !== 'undefined') {
-            return window.gaGlobal.vid
-        }
-
-        return null
+    private async retrieveGtagClientIDWithTimeout(timeout: number): Promise<string | null> {
+        return new Promise((resolve) => {
+            let resolved = false;
+    
+            const timeoutId = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve(null);
+                }
+            }, timeout);
+    
+            this.waitForGtag().then(() => {
+                const measurementId = this.getGtagMeasurementId();
+                if (!measurementId) {
+                    console.warn("No Google Measurement ID found.");
+                    resolve(null);
+                    return;
+                }
+    
+                if (typeof window.gtag !== 'undefined') {
+                    window.gtag('get', measurementId, 'client_id', (client_id: string) => {
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeoutId);
+                            resolve(client_id);
+                        }
+                    });
+                } else {
+                    resolve(null);
+                }
+            }).catch(() => {
+                console.warn("gtag.js did not load. Skipping attribution.");
+                resolve(null);
+            });
+        });
     }
 
+    private waitForGtag(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (typeof window.gtag !== 'undefined') {
+                resolve(); // Already loaded
+                return;
+            }
+    
+            const timeout = 5000; // 5 seconds timeout
+            let elapsed = 0;
+            const intervalTime = 100; // Check every 100ms
+    
+            const interval = setInterval(() => {
+                elapsed += intervalTime;
+    
+                if (typeof window.gtag !== 'undefined') {
+                    clearInterval(interval);
+                    resolve();
+                } else if (elapsed >= timeout) {
+                    clearInterval(interval);
+                    console.warn("gtag.js did not load within 5 seconds.");
+                    reject(); // Reject if timeout occurs
+                }
+            }, intervalTime);
+        });
+    }
+
+    private getGtagMeasurementId(): string | null {
+        if (Array.isArray(window.dataLayer)) {
+            const configEvent = window.dataLayer.find(event => 
+                event[0] === 'config' && typeof event[1] === 'string' && event[1].startsWith('G-')
+            );
+            if (configEvent) {
+                return configEvent[1]; // Measurement ID with G- prefix
+            }
+        }
+        return null;
+    }
 
     private getQueryParamsAsJson(): Record<string, string | string[]> {
         const queryParams = new URLSearchParams(window.location.search);
@@ -694,9 +768,10 @@ export default class ApphudSDK implements Apphud {
     /**
      * Create event or add it to queue if not ready yet
      * @param event - event data
+     * @param refreshPlacements - whether to refresh placements after tracking
      * @private
      */
-    private trackEvent(event: EventData): void {
+    private trackEvent(event: EventData, refreshPlacements: boolean = false): void {
         this.ready(async (): Promise<void> => {
             api.createEvent(this.eventData(event)).then(() => {
                 // remove from queue
@@ -707,7 +782,8 @@ export default class ApphudSDK implements Apphud {
                     }
                 }
                 this.saveEventQueue()
-                this.initializeApp(false)
+                
+                this.initializeApp(false, refreshPlacements)
             })
         });
     }
