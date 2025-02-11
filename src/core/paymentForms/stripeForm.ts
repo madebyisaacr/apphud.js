@@ -111,7 +111,7 @@ class StripeForm implements PaymentForm {
             this.elementIDs = {}
 
             for (const key in ELEMENT_IDS.new) {
-                this.elementIDs[key] = `${options.id}-${ELEMENT_IDS.new[key]}`
+                this.elementIDs[key] = `${options.id}-${ELEMENT_IDS.new[key as keyof typeof ELEMENT_IDS.new]}`
             }
         } else if (document.getElementById(ELEMENT_IDS.new.form)) {
             this.elementIDs = ELEMENT_IDS.new

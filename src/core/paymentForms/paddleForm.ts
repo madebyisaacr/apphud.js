@@ -1,5 +1,5 @@
 import {log, logError} from "../../utils";
-import {initializePaddle, Paddle, CheckoutOpenOptions, PaddleEventData} from '@paddle/paddle-js'
+import {initializePaddle, Paddle, CheckoutOpenOptions, PaddleEventData, DisplayMode, AvailablePaymentMethod, Variant} from '@paddle/paddle-js'
 import {PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, Subscription, PaddleSubscriptionOptions} from "../../types";
 import FormBuilder from "./formBuilder";
 import {config} from "../config/config";
@@ -87,13 +87,13 @@ class PaddleForm implements PaymentForm {
         const baseConfig = {
             settings: {
                 locale: this.user.locale || "en",
-                displayMode: settings.displayMode || "overlay",
+                displayMode: (settings.displayMode || "overlay") as DisplayMode,
                 theme: settings.theme || "light",
-                variant: settings.variant,
+                variant: settings.variant as Variant,
                 frameTarget: this.currentOptions?.id,
                 frameInitialHeight: settings.frameInitialHeight,
                 frameStyle: settings.frameStyle,
-                allowedPaymentMethods: settings.allowedPaymentMethods
+                allowedPaymentMethods: settings.allowedPaymentMethods as AvailablePaymentMethod[]
             },
             customData: {
                 apphud_client_id: this.user.id,
@@ -183,7 +183,9 @@ class PaddleForm implements PaymentForm {
                 })
                 this.setButtonState("ready")
                 if (this.currentOptions?.paddleSettings?.errorCallback) {
-                    this.currentOptions.paddleSettings.errorCallback(event.data)
+                    this.currentOptions.paddleSettings.errorCallback(
+                        typeof event.data === "string" ? event.data : "Payment failed"
+                    )
                 }
                 break;
                 
