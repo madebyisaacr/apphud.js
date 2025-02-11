@@ -107,11 +107,11 @@ class StripeForm implements PaymentForm {
         this.buttonStateSetter = options.buttonStateSetter
 
         // Detect which form type is present
-        if (options.elementID) {
+        if (options.id) {
             this.elementIDs = {}
 
             for (const key in ELEMENT_IDS.new) {
-                this.elementIDs[key] = `${options.elementID}-${ELEMENT_IDS.new[key]}`
+                this.elementIDs[key] = `${options.id}-${ELEMENT_IDS.new[key]}`
             }
         } else if (document.getElementById(ELEMENT_IDS.new.form)) {
             this.elementIDs = ELEMENT_IDS.new

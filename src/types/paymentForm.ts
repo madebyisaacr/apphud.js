@@ -28,8 +28,8 @@ export interface PaymentProviderFormOptions {
     successUrl?: string
     failureUrl?: string
     stripeAppearance?: StripeAppearanceOptions
-    paddleAppearance?: PaddleAppearanceOptions
-    elementID?: string
+    paddleSettings?: PaddleSettingsOptions
+    id?: string
     buttonStateSetter?: (state: "loading" | "ready" | "processing") => void
 }
 
@@ -54,8 +54,14 @@ export interface StripeAppearanceOptions {
     labels?: Appearance['labels']
 }
 
-export interface PaddleAppearanceOptions {
-  theme?: 'light' | 'dark';
+export interface PaddleSettingsOptions {
+    variant?: string;
+    frameInitialHeight?: number;
+    frameStyle?: string;
+    displayMode?: string;
+    allowedPaymentMethods?: string[];
+    theme?: 'light' | 'dark';
+    errorCallback?: (error: string) => void;
 }
 
 export interface SubscriptionOptions {
