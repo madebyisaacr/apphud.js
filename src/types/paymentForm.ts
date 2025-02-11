@@ -28,7 +28,9 @@ export interface PaymentProviderFormOptions {
     successUrl?: string
     failureUrl?: string
     stripeAppearance?: StripeAppearanceOptions
-    paddleAppearance?: PaddleAppearanceOptions
+    paddleSettings?: PaddleSettingsOptions
+    id?: string
+    buttonStateSetter?: (state: "loading" | "ready" | "processing") => void
 }
 
 export interface Country {
@@ -47,10 +49,19 @@ export interface StripeAppearanceOptions {
     theme?: Appearance['theme'];
     variables?: Appearance['variables'];
     layout?: Layout
+    rules?: Appearance['rules']
+    disableAnimations?: boolean
+    labels?: Appearance['labels']
 }
 
-export interface PaddleAppearanceOptions {
-  theme?: 'light' | 'dark';
+export interface PaddleSettingsOptions {
+    variant?: string;
+    frameInitialHeight?: number;
+    frameStyle?: string;
+    displayMode?: string;
+    allowedPaymentMethods?: string[];
+    theme?: 'light' | 'dark';
+    errorCallback?: (error: string) => void;
 }
 
 export interface SubscriptionOptions {

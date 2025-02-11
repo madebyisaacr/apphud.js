@@ -13,4 +13,8 @@ export const config: Config = {
     headers: {},
     stripeLiveKey: "pk_live_4iYTlDlSJeqsh5ZAZNuDsLte004vt1l4tS",
     stripeTestKey: "pk_test_leENTjttGVwRY2ZkCk0UaaiG00oeNHfn4o",
+    options: {
+        use_sepa_debit: true,
+        use_bancontact: true
+    }
 };
