@@ -1,5 +1,5 @@
 import {log, logError} from "../../utils";
-import {initializePaddle, Paddle, CheckoutOpenOptions, PaddleEventData} from '@paddle/paddle-js'
+import {initializePaddle, Paddle, CheckoutOpenOptions, PaddleEventData, DisplayMode, AvailablePaymentMethod, Variant} from '@paddle/paddle-js'
 import {PaymentForm, PaymentProviderFormOptions, User, PaymentProvider, Subscription, PaddleSubscriptionOptions} from "../../types";
 import FormBuilder from "./formBuilder";
 import {config} from "../config/config";
@@ -8,27 +8,7 @@ import {setCookie} from "../../cookies";
 import {DeepLinkURL, SelectedProductDuration} from "../config/constants";
 
 class PaddleForm implements PaymentForm {
-    // Add support for both new and old element IDs
-    private readonly elementIDs = {
-        new: {
-            form: "apphud-paddle-payment-form",
-            submit: "paddle-submit",
-            error: "paddle-error-message"
-        },
-        old: {
-            form: "apphud-payment-form",
-            submit: "submit",
-            error: "error-message"
-        }
-    }
-    
-    // Add formType detection
-    private formType: 'new' | 'old' = 'new';
-    
     private paddle: Paddle | null | undefined = null
-    private submit: HTMLButtonElement | null = null
-    private submitReadyText = "Subscribe"
-    private submitProcessingText = "Please wait..."
     private currentOptions: PaymentProviderFormOptions | null = null
     private subscription: Subscription | null = null
 
@@ -77,15 +57,12 @@ class PaddleForm implements PaymentForm {
             logError('Failed to create subscription', error)
             return
         }
-        
-        // Detect which form type is present
-        this.formType = document.getElementById(this.elementIDs.new.form) ? 'new' : 'old';
-        
+
         log("Initializing Paddle payment form for product:", productId)
         this.formBuilder.emit("payment_form_initialized", { 
             paymentProvider: "paddle", 
             event: { 
-                selector: `#${this.elementIDs[this.formType].form}` 
+                selector: `#${options?.id}`
             } 
         })
 
@@ -100,66 +77,23 @@ class PaddleForm implements PaymentForm {
             return
         }
 
-        // Setup form elements
-        await this.setupFormElements()
-        
-        // Setup checkout configuration
-        await this.setupCheckout(productId, paywallId, placementId, options)
-    }
+        const settings = options?.paddleSettings || {}
 
-    private async setupFormElements(): Promise<void> {
-        const form = document.querySelector(`#${this.elementIDs[this.formType].form}`)
-        if (!form) {
-            throw new Error("Payment form container not found")
-        }
-
-        // Update submit button selector
-        const submitButton = document.querySelector(`#${this.elementIDs[this.formType].submit}`)
-        if (!submitButton) {
-            logError(`Submit button is required. Add <button id="${this.elementIDs[this.formType].submit}">Pay</button>`)
+        if (!this.currentOptions?.id) {
+            logError("Paddle form id is required")
             return
-        }
-
-        this.submit = submitButton as HTMLButtonElement
-        this.setButtonState("loading")
-
-        if (this.submit.innerText !== "") {
-            this.submitReadyText = this.submit.innerText
-        }
-
-        // Update error message container ID
-        if (!document.querySelector(`#${this.elementIDs[this.formType].error}`)) {
-            const errorDiv = document.createElement('div')
-            errorDiv.id = this.elementIDs[this.formType].error
-            form.appendChild(errorDiv)
-        }
-    }
-
-    /**
-     * Setup checkout configuration and form submission handler
-     * @param productId - paddle price_id
-     * @param paywallId - paywall user purchased from
-     * @param placementId - placement id user purchased from
-     * @param options - Form options including success URL and appearance customization
-     * @private
-     */
-    private async setupCheckout(
-        productId: string, 
-        paywallId: string | undefined, 
-        placementId: string | undefined, 
-        options: PaymentProviderFormOptions
-    ): Promise<void> {
-        const form = document.querySelector(`#${this.elementIDs[this.formType].form}`)
-
-        if (!form) {
-            throw new Error("Payment form: no form provided")
         }
 
         const baseConfig = {
             settings: {
-                displayMode: "overlay" as const,
-                theme: options?.paddleAppearance?.theme || "light",
-                locale: this.user.locale || "en"
+                locale: this.user.locale || "en",
+                displayMode: (settings.displayMode || "overlay") as DisplayMode,
+                theme: settings.theme || "light",
+                variant: settings.variant as Variant,
+                frameTarget: this.currentOptions?.id,
+                frameInitialHeight: settings.frameInitialHeight,
+                frameStyle: settings.frameStyle,
+                allowedPaymentMethods: settings.allowedPaymentMethods as AvailablePaymentMethod[]
             },
             customData: {
                 apphud_client_id: this.user.id,
@@ -183,26 +117,22 @@ class PaddleForm implements PaymentForm {
                     quantity: 1
                 }]
             }
+        
+        this.setButtonState("processing")
 
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault()
-            this.setButtonState("processing")
-
-            try {
-                if (!this.paddle) {
-                    throw new Error("Paddle not initialized")
-                }
-                await this.paddle.Checkout.open(checkoutConfig)
-            } catch (error) {
-                logError("Failed to open Paddle checkout:", error)
-                this.setButtonState("ready")
-                
-                const errorElement = document.querySelector(`#${this.elementIDs[this.formType].error}`)
-                if (errorElement) {
-                    errorElement.textContent = error instanceof Error ? error.message : "Payment failed"
-                }
+        try {
+            if (!this.paddle) {
+                throw new Error("Paddle not initialized")
             }
-        })
+            this.paddle.Checkout.open(checkoutConfig)
+        } catch (error) {
+            logError("Failed to open Paddle checkout:", error)
+            this.setButtonState("ready")
+
+            if (settings.errorCallback) {
+                settings.errorCallback(error instanceof Error ? error.message : "Payment failed")
+            }
+        }
 
         // Form is ready
         this.setButtonState("ready")
@@ -252,6 +182,11 @@ class PaddleForm implements PaymentForm {
                     event: { error: event.data }
                 })
                 this.setButtonState("ready")
+                if (this.currentOptions?.paddleSettings?.errorCallback) {
+                    this.currentOptions.paddleSettings.errorCallback(
+                        typeof event.data === "string" ? event.data : "Payment failed"
+                    )
+                }
                 break;
                 
             case "checkout.loaded":
@@ -271,23 +206,8 @@ class PaddleForm implements PaymentForm {
      * @private
      */
     private setButtonState(state: "loading" | "ready" | "processing"): void {
-        if (!this.submit) {
-            logError("Submit button not found. Failed to set state:", state)
-            return
-        }
-
-        switch (state) {
-            case "loading":
-                this.submit.setAttribute("disabled", "disabled")
-                break
-            case "ready":
-                this.submit.removeAttribute("disabled")
-                this.submit.innerText = this.submitReadyText
-                break
-            case "processing":
-                this.submit.setAttribute("disabled", "disabled")
-                this.submit.innerText = this.submitProcessingText
-                break
+        if (this.currentOptions?.buttonStateSetter) {
+            this.currentOptions.buttonStateSetter(state)
         }
     }
 

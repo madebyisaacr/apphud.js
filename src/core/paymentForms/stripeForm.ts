@@ -17,24 +17,22 @@ import {setCookie} from "../../cookies";
 import {config} from "../config/config";
 import FormBuilder from "./formBuilder";
 
-class StripeForm implements PaymentForm {
-    private readonly elementIDs = {
-        new: {
-            form: "apphud-stripe-payment-form",
-            payment: "stripe-payment-element",
-            submit: "stripe-submit",
-            error: "stripe-error-message"
-        },
-        old: {
-            form: "apphud-payment-form",
-            payment: "payment-element",
-            submit: "submit",
-            error: "error-message"
-        }
+const ELEMENT_IDS = {
+    new: {
+        form: "apphud-stripe-payment-form",
+        payment: "stripe-payment-element",
+        submit: "stripe-submit",
+        error: "stripe-error-message"
+    },
+    old: {
+        form: "apphud-payment-form",
+        payment: "payment-element",
+        submit: "submit",
+        error: "error-message"
     }
-    
-    private formType: 'new' | 'old' = 'new';
-    
+}
+
+class StripeForm implements PaymentForm {
     private stripe: Stripe | null = null
     private elements: StripeElements | undefined = undefined
     private paymentElement: StripePaymentElement | null = null
@@ -47,6 +45,8 @@ class StripeForm implements PaymentForm {
     private currentPaywallId: string | undefined;
     private currentPlacementId: string | undefined;
     private subscriptionOptions?: StripeSubscriptionOptions;
+    private elementIDs: { [key: string]: string } = ELEMENT_IDS.old;
+    private buttonStateSetter?: (state: "loading" | "ready" | "processing") => void | undefined;
 
     constructor(private user: User, private providerId: string, private accountId: string, private formBuilder: FormBuilder) {
         documentReady(async () => {
@@ -72,8 +72,8 @@ class StripeForm implements PaymentForm {
                 padding: 10px 0;
             }
 
-            #${this.elementIDs.new.payment},
-            #${this.elementIDs.old.payment} {
+            #${ELEMENT_IDS.new.payment},
+            #${ELEMENT_IDS.old.payment} {
                 width: 100%;
             }
         `;
@@ -104,14 +104,23 @@ class StripeForm implements PaymentForm {
         this.currentPlacementId = placementId;
         this.subscriptionOptions = subscriptionOptions;
         this.formBuilder.emit("payment_form_initialized", { paymentProvider: "stripe", event: { selector: "#apphud-stripe-payment-form" } })
+        this.buttonStateSetter = options.buttonStateSetter
 
         // Detect which form type is present
-        this.formType = document.getElementById(this.elementIDs.new.form) ? 'new' : 'old';
+        if (options.id) {
+            this.elementIDs = {}
+
+            for (const key in ELEMENT_IDS.new) {
+                this.elementIDs[key] = `${options.id}-${ELEMENT_IDS.new[key as keyof typeof ELEMENT_IDS.new]}`
+            }
+        } else if (document.getElementById(ELEMENT_IDS.new.form)) {
+            this.elementIDs = ELEMENT_IDS.new
+        }
         
-        const submitButton = document.querySelector(`#${this.elementIDs[this.formType].submit}`)
+        const submitButton = document.querySelector(`#${this.elementIDs.submit}`)
 
         if (!submitButton) {
-            logError(`Submit button is required. Add <button id="${this.elementIDs[this.formType].submit}">Pay</button>`)
+            logError(`Submit button is required. Add <button id="${this.elementIDs.submit}">Pay</button>`)
             return
         }
 
@@ -138,7 +147,7 @@ class StripeForm implements PaymentForm {
             logError("Failed to initialize Stripe form:", error)
             this.setButtonState("ready")
             
-            const errorElement = document.querySelector(`#${this.elementIDs[this.formType].error}`)
+            const errorElement = document.querySelector(`#${this.elementIDs.error}`)
             if (errorElement) {
                 errorElement.textContent = "Failed to initialize payment form. Please try again."
             }
@@ -153,6 +162,11 @@ class StripeForm implements PaymentForm {
     private setButtonState(state: "loading" | "ready" | "processing"): void {
         if (!this.submit) {
             logError("Submit button not found. Failed to set state:", state)
+            return
+        }
+
+        if (this.buttonStateSetter) {
+            this.buttonStateSetter(state)
             return
         }
 
@@ -252,6 +266,9 @@ class StripeForm implements PaymentForm {
         const stripeAppearance = options?.stripeAppearance && {
             theme: options.stripeAppearance.theme,
             variables: options.stripeAppearance.variables,
+            rules: options.stripeAppearance.rules,
+            disableAnimations: options.stripeAppearance.disableAnimations,
+            labels: options.stripeAppearance.labels,
         }
 
         // Define elements options
@@ -264,12 +281,14 @@ class StripeForm implements PaymentForm {
         this.elements = this.stripe.elements(elementsOptions)
         
         // Create and mount the Payment Element
-        const paymentElement = this.elements.create('payment')
+        const paymentElement = this.elements.create('payment', {
+            layout: options?.stripeAppearance?.layout
+        })
         
-        const paymentElementContainer = document.getElementById(this.elementIDs[this.formType].payment);
+        const paymentElementContainer = document.getElementById(this.elementIDs.payment);
         if (paymentElementContainer) {
             paymentElementContainer.innerHTML = '<div class="stripe-element-container"></div>';
-            paymentElement.mount(`#${this.elementIDs[this.formType].payment} .stripe-element-container`);
+            paymentElement.mount(`#${this.elementIDs.payment} .stripe-element-container`);
         }
 
         this.paymentElement = paymentElement;
@@ -282,7 +301,7 @@ class StripeForm implements PaymentForm {
 
         // Event listener for change events
         paymentElement.on('change', (event: StripePaymentElementChangeEvent) => {
-            const displayError = document.querySelector(`#${this.elementIDs[this.formType].error}`)
+            const displayError = document.querySelector(`#${this.elementIDs.error}`)
             if (displayError) {
                 // Clear any previous error messages when the form is valid
                 if (event.complete) {
@@ -293,7 +312,7 @@ class StripeForm implements PaymentForm {
 
         // Add a separate error event listener for loader errors
         paymentElement.on('loaderror', (event) => {
-            const displayError = document.querySelector(`#${this.elementIDs[this.formType].error}`)
+            const displayError = document.querySelector(`#${this.elementIDs.error}`)
             if (displayError && event.error) {
                 displayError.textContent = event.error.message || null;
             }
@@ -306,7 +325,7 @@ class StripeForm implements PaymentForm {
      * @private
      */
     private async setupForm(options?: PaymentProviderFormOptions): Promise<void> {
-        const form = document.querySelector(`#${this.elementIDs[this.formType].form}`)
+        const form = document.querySelector(`#${this.elementIDs.form}`)
 
         if (!form) {
             logError("Payment form: no form provided")
@@ -374,7 +393,7 @@ class StripeForm implements PaymentForm {
                 logError("Failed to process payment:", error)
                 this.setButtonState("ready")
                 
-                const errorElement = document.querySelector(`#${this.elementIDs[this.formType].error}`)
+                const errorElement = document.querySelector(`#${this.elementIDs.error}`)
                 if (errorElement) {
                     errorElement.textContent = error instanceof Error ? error.message : "Failed to process payment. Please try again."
                 }
