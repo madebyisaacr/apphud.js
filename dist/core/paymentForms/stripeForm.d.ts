@@ -5,8 +5,6 @@ declare class StripeForm implements PaymentForm {
     private providerId;
     private accountId;
     private formBuilder;
-    private readonly elementIDs;
-    private formType;
     private stripe;
     private elements;
     private paymentElement;
@@ -19,6 +17,8 @@ declare class StripeForm implements PaymentForm {
     private currentPaywallId;
     private currentPlacementId;
     private subscriptionOptions?;
+    private elementIDs;
+    private buttonStateSetter?;
     constructor(user: User, providerId: string, accountId: string, formBuilder: FormBuilder);
     private injectStyles;
     /**

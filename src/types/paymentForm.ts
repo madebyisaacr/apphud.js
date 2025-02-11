@@ -28,6 +28,7 @@ export interface PaymentProviderFormOptions {
     successUrl?: string
     failureUrl?: string
     stripeAppearance?: StripeAppearanceOptions
+    stripePaymentMethods?: string[]
     paddleSettings?: PaddleSettingsOptions
     id?: string
     buttonStateSetter?: (state: "loading" | "ready" | "processing") => void

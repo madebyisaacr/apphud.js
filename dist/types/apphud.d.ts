@@ -192,11 +192,6 @@ export type Config = {
     headers: HeadersInit;
     stripeLiveKey: string;
     stripeTestKey: string;
-    options?: PaymentOptions;
-};
-export type PaymentOptions = {
-    use_sepa_debit?: boolean;
-    use_bancontact?: boolean;
 };
 export interface EventData {
     id?: string;

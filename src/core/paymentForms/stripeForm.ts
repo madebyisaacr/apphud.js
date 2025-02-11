@@ -134,7 +134,7 @@ class StripeForm implements PaymentForm {
         try {
             // Just create the customer and initialize the form
             log("Create Stripe customer for user", this.user.id);
-            const customer = await this.createCustomer();
+            const customer = await this.createCustomer(options);
             this.customer = { id: customer.id, client_secret: customer.client_secret };
 
             // Initialize Stripe elements
@@ -222,26 +222,22 @@ class StripeForm implements PaymentForm {
         log('Subscription created', this.subscription);
     }    
 
-    private async createCustomer(): Promise<CustomerSetup> {
-        const paymentMethods = ['card'];
+    private async createCustomer(options: PaymentProviderFormOptions): Promise<CustomerSetup> {
+        const defaultPaymentMethods = ['card', 'sepa_debit', 'bancontact'];
         
-        if (config.options?.use_sepa_debit) {
-            paymentMethods.push('sepa_debit');
-        }
-    
-        if (config.options?.use_bancontact) {
-            paymentMethods.push('bancontact');
-        }
-        
+        const paymentMethods = options.stripePaymentMethods?.length 
+            ? options.stripePaymentMethods 
+            : defaultPaymentMethods;
+
         const customer = await api.createCustomer(this.providerId, {
             user_id: this.user.id,
             payment_methods: paymentMethods
         });
-    
+
         if (!customer) {
             throw new Error('Failed to create customer');
         }
-    
+
         log('Customer created', customer);
         return customer;
     }
