@@ -885,8 +885,25 @@ export default class ApphudSDK implements Apphud {
 
                     if (newVal) {
                         if (varName.endsWith("price") && !this.isPaywallShown) {
-                            this.track("paywall_shown", { paywall_id: this._currentPaywall?.id, placement_id: this._currentPlacement?.id }, {});
-                            this.isPaywallShown = true;
+                            const keyArr = varName.split(',').map(s => s.trim());
+                            let placementID: string | undefined;
+                            
+                            if (keyArr.length === 3) {
+                                placementID = keyArr[0];
+                            } else {
+                                const saved = this.getSavedPlacementBundleIndex();
+                                placementID = saved.placementID;
+                            }
+
+                            const placement = this.findPlacementByID(placementID!);
+                            if (placement && placement.paywalls.length > 0) {
+                                const paywall = placement.paywalls[0];
+                                this.track("paywall_shown", {
+                                    paywall_id: paywall.id,
+                                    placement_id: placement.id
+                                }, {});
+                                this.isPaywallShown = true;
+                            }
                         }
 
                         elm.innerHTML = newVal
