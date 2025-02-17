@@ -27,6 +27,7 @@ export interface PaymentProviderFormOptions {
     paymentProvider?: PaymentProviderKind;
     successUrl?: string
     failureUrl?: string
+    onSuccess?: () => void
     stripeAppearance?: StripeAppearanceOptions
     stripePaymentMethods?: string[]
     paddleSettings?: PaddleSettingsOptions
