@@ -167,10 +167,12 @@ class PaddleForm implements PaymentForm {
                 })
 
                 setTimeout(() => {
-                    if (options?.successUrl && options.successUrl !== 'undefined') {
+                    if (options?.onSuccess) {
+                        options.onSuccess()
+                    } else if (options?.successUrl && options.successUrl !== 'undefined') {
                         document.location.href = options?.successUrl
                     } else {
-                        document.location.href = config.baseSuccessURL+'/'+deepLink
+                        document.location.href = config.baseSuccessURL + '/' + deepLink
                     }
                 }, config.redirectDelay)
                 break;
