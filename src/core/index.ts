@@ -116,8 +116,9 @@ export default class ApphudSDK implements Apphud {
      * Track event
      * @param eventName - event name
      * @param callback - callback function
+     * @returns Function to unsubscribe from the event
      */
-    public on(eventName: LifecycleEventName, callback: LifecycleEventCallback): void {
+    public on(eventName: LifecycleEventName, callback: LifecycleEventCallback): () => void {
         this.checkInitialization();
 
         if (!this.events[eventName]) {
@@ -125,6 +126,18 @@ export default class ApphudSDK implements Apphud {
         }
 
         this.events[eventName].push(callback);
+
+        // Return unsubscribe function
+        return () => {
+            if (this.events[eventName]) {
+                this.events[eventName] = this.events[eventName].filter(cb => cb !== callback);
+                
+                // Clean up empty event arrays
+                if (this.events[eventName].length === 0) {
+                    delete this.events[eventName];
+                }
+            }
+        };
     }
 
     private emit(eventName: LifecycleEventName, event: any): void {
@@ -1097,5 +1110,16 @@ export default class ApphudSDK implements Apphud {
             log('not ready push to queue', callback);
             this.queue.push(callback);
         }
+    }
+
+    /**
+     * Get success URL for completed payments
+     * @returns The success URL with deep link if available, or base success URL
+     */
+    public getSuccessURL(): string {
+        this.checkInitialization();
+        
+        const deepLink = this.getDeepLink();
+        return deepLink ? `${config.baseSuccessURL}/${deepLink}` : config.baseSuccessURL;
     }
 }
