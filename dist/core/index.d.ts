@@ -32,8 +32,9 @@ export default class ApphudSDK implements Apphud {
      * Track event
      * @param eventName - event name
      * @param callback - callback function
+     * @returns Function to unsubscribe from the event
      */
-    on(eventName: LifecycleEventName, callback: LifecycleEventCallback): void;
+    on(eventName: LifecycleEventName, callback: LifecycleEventCallback): () => void;
     private emit;
     /**
      * Get saved deeplink after subscription created
@@ -208,5 +209,10 @@ export default class ApphudSDK implements Apphud {
      * @private
      */
     private ready;
+    /**
+     * Get success URL for completed payments
+     * @returns The success URL with deep link if available, or base success URL
+     */
+    getSuccessURL(): string;
 }
 //# sourceMappingURL=index.d.ts.map
